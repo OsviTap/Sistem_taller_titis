@@ -18,6 +18,10 @@ const Producto = sequelize.define('Producto', {
         type: DataTypes.FLOAT,
         allowNull: false,
     },
+    fechaAdquisicion: {
+        type: DataTypes.DATE,
+        allowNull: false,
+    },
 }, {
     timestamps: true,
 });

@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: 'class',
   content: [
     "./index.html",
     "./src/**/*.{vue,js,ts,jsx,tsx}",
@@ -9,7 +10,15 @@ module.exports = {
     extend: {},
   },
   plugins: [
-    require('flowbite/plugin'),
+    require('flowbite/plugin')({
+      charts: true,
+      datatables: true,
+    }),
+  ],
+  safelist: [
+    'datatable-row',
+    'datatable-header',
+    'datatable-cell'
   ],
 }
 

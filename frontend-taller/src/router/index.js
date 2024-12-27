@@ -3,6 +3,7 @@ import HomeView from '../App.vue'
 import LoginView from '@/views/LoginView.vue';
 
 
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -29,6 +30,11 @@ const router = createRouter({
       component: () => import('../views/UsuariosView.vue'),},
     {path: '/visitas', name: 'visitas',
       component: () => import('../views/VisitasView.vue'),},
+    {path: '/historial', name: 'historial',
+      component: () => import('../views/HistorialView.vue'),},
+    {path: '/historial-productos', name: 'ProductHistory',
+        component: () => import('@/views/HistorialProductosView.vue'),
+      },
     
   ],
 })

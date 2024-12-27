@@ -1,16 +1,16 @@
 const express = require('express');
-const Cliente = require('../models/Cliente');
+const  Cliente  = require('../models/Cliente');
 const router = express.Router();
 
 // Obtener todos los clientes
 router.get('/', async (req, res) => {
     try {
-        const clientes = await Cliente.findAll();
-        res.json(clientes);
-    } catch (err) {
-        res.status(500).json({ error: 'Error al obtener clientes' });
+      const clientes = await Cliente.findAll();
+      res.json(clientes);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
     }
-});
+  });
 
 // Crear un cliente
 router.post('/', async (req, res) => {
@@ -43,6 +43,20 @@ router.put('/:id', async (req, res) => {
         res.json(cliente);
     } catch (err) {
         res.status(400).json({ error: 'Error al actualizar cliente' });
+    }
+});
+
+// Actualizar estado de un cliente (intercambiar entre 1 y 0)
+router.patch('/:id', async (req, res) => {
+    try {
+        const cliente = await Cliente.findByPk(req.params.id);
+        if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' });
+
+        cliente.estado = cliente.estado === 1 ? 0 : 1; // Corregido
+        await cliente.save();
+        res.json(cliente);
+    } catch (err) {
+        res.status(500).json({ error: 'Error al actualizar estado del cliente' });
     }
 });
 

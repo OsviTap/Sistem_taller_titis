@@ -1,231 +1,140 @@
 <template>
     <div class="max-w-full bg-white rounded-lg shadow dark:bg-gray-800 p-4 md:p-6">
-        <div class="overflow-x-auto">
-            <table id="search-table">
-                <thead>
-                    <tr>
-                        <th>
-                            <span class="flex items-center">
-                                Company Name
-                            </span>
-                        </th>
-                        <th>
-                            <span class="flex items-center">
-                                Ticker
-                            </span>
-                        </th>
-                        <th>
-                            <span class="flex items-center">
-                                Stock Price
-                            </span>
-                        </th>
-                        <th>
-                            <span class="flex items-center">
-                                Market Capitalization
-                            </span>
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td class="font-medium text-gray-900 whitespace-nowrap dark:text-white">Apple Inc.</td>
-                        <td>AAPL</td>
-                        <td>$192.58</td>
-                        <td>$3.04T</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium text-gray-900 whitespace-nowrap dark:text-white">Microsoft Corporation</td>
-                        <td>MSFT</td>
-                        <td>$340.54</td>
-                        <td>$2.56T</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium text-gray-900 whitespace-nowrap dark:text-white">Alphabet Inc.</td>
-                        <td>GOOGL</td>
-                        <td>$134.12</td>
-                        <td>$1.72T</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium text-gray-900 whitespace-nowrap dark:text-white">Amazon.com Inc.</td>
-                        <td>AMZN</td>
-                        <td>$138.01</td>
-                        <td>$1.42T</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium text-gray-900 whitespace-nowrap dark:text-white">NVIDIA Corporation</td>
-                        <td>NVDA</td>
-                        <td>$466.19</td>
-                        <td>$1.16T</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium text-gray-900 whitespace-nowrap dark:text-white">Tesla Inc.</td>
-                        <td>TSLA</td>
-                        <td>$255.98</td>
-                        <td>$811.00B</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium text-gray-900 whitespace-nowrap dark:text-white">Meta Platforms Inc.</td>
-                        <td>META</td>
-                        <td>$311.71</td>
-                        <td>$816.00B</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium text-gray-900 whitespace-nowrap dark:text-white">Berkshire Hathaway Inc.</td>
-                        <td>BRK.B</td>
-                        <td>$354.08</td>
-                        <td>$783.00B</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium text-gray-900 whitespace-nowrap dark:text-white">TSMC</td>
-                        <td>TSM</td>
-                        <td>$103.51</td>
-                        <td>$538.00B</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium text-gray-900 whitespace-nowrap dark:text-white">UnitedHealth Group Incorporated</td>
-                        <td>UNH</td>
-                        <td>$501.96</td>
-                        <td>$466.00B</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium text-gray-900 whitespace-nowrap dark:text-white">Johnson & Johnson</td>
-                        <td>JNJ</td>
-                        <td>$172.85</td>
-                        <td>$452.00B</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium text-gray-900 whitespace-nowrap dark:text-white">JPMorgan Chase & Co.</td>
-                        <td>JPM</td>
-                        <td>$150.23</td>
-                        <td>$431.00B</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium text-gray-900 whitespace-nowrap dark:text-white">Visa Inc.</td>
-                        <td>V</td>
-                        <td>$246.39</td>
-                        <td>$519.00B</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium text-gray-900 whitespace-nowrap dark:text-white">Eli Lilly and Company</td>
-                        <td>LLY</td>
-                        <td>$582.97</td>
-                        <td>$552.00B</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium text-gray-900 whitespace-nowrap dark:text-white">Walmart Inc.</td>
-                        <td>WMT</td>
-                        <td>$159.67</td>
-                        <td>$429.00B</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium text-gray-900 whitespace-nowrap dark:text-white">Samsung Electronics Co., Ltd.</td>
-                        <td>005930.KS</td>
-                        <td>$70.22</td>
-                        <td>$429.00B</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium text-gray-900 whitespace-nowrap dark:text-white">Procter & Gamble Co.</td>
-                        <td>PG</td>
-                        <td>$156.47</td>
-                        <td>$366.00B</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium text-gray-900 whitespace-nowrap dark:text-white">Nestlé S.A.</td>
-                        <td>NESN.SW</td>
-                        <td>$120.51</td>
-                        <td>$338.00B</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium text-gray-900 whitespace-nowrap dark:text-white">Roche Holding AG</td>
-                        <td>ROG.SW</td>
-                        <td>$296.00</td>
-                        <td>$317.00B</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium text-gray-900 whitespace-nowrap dark:text-white">Chevron Corporation</td>
-                        <td>CVX</td>
-                        <td>$160.92</td>
-                        <td>$310.00B</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium text-gray-900 whitespace-nowrap dark:text-white">LVMH Moët Hennessy Louis Vuitton</td>
-                        <td>MC.PA</td>
-                        <td>$956.60</td>
-                        <td>$478.00B</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium text-gray-900 whitespace-nowrap dark:text-white">Pfizer Inc.</td>
-                        <td>PFE</td>
-                        <td>$35.95</td>
-                        <td>$200.00B</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium text-gray-900 whitespace-nowrap dark:text-white">Novo Nordisk A/S</td>
-                        <td>NVO</td>
-                        <td>$189.15</td>
-                        <td>$443.00B</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium text-gray-900 whitespace-nowrap dark:text-white">PepsiCo, Inc.</td>
-                        <td>PEP</td>
-                        <td>$182.56</td>
-                        <td>$311.00B</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium text-gray-900 whitespace-nowrap dark:text-white">ASML Holding N.V.</td>
-                        <td>ASML</td>
-                        <td>$665.72</td>
-                        <td>$273.00B</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium text-gray-900 whitespace-nowrap dark:text-white">The Coca-Cola Company</td>
-                        <td>KO</td>
-                        <td>$61.37</td>
-                        <td>$265.00B</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium text-gray-900 whitespace-nowrap dark:text-white">Oracle Corporation</td>
-                        <td>ORCL</td>
-                        <td>$118.36</td>
-                        <td>$319.00B</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium text-gray-900 whitespace-nowrap dark:text-white">Merck & Co., Inc.</td>
-                        <td>MRK</td>
-                        <td>$109.12</td>
-                        <td>$276.00B</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium text-gray-900 whitespace-nowrap dark:text-white">Broadcom Inc.</td>
-                        <td>AVGO</td>
-                        <td>$861.80</td>
-                        <td>$356.00B</td>
-                    </tr>
-                    <tr>
-                        <td class="font-medium text-gray-900 whitespace-nowrap dark:text-white">Mastercard Incorporated</td>
-                        <td>MA</td>
-                        <td>$421.44</td>
-                        <td>$396.00B</td>
-                    </tr>
-                </tbody>
-            </table>
+      <!-- Busqueda por cliente o matricula -->
+      <!-- <div class="mb-4 flex flex-col md:flex-row gap-4">
+        <input 
+          v-model="searchQuery" 
+          type="text" 
+          placeholder="Buscar por nombre o matrícula..."
+          class="w-full md:w-1/2 p-2 border rounded-md focus:ring focus:ring-blue-300"
+        />
+        <button 
+          @click="buscarCliente" 
+          class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+          Buscar
+        </button>
+      </div> -->
+  
+      <!-- Tabla con resultados -->
+      <div class="overflow-x-auto">
+        <table id="search-table">
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Vehículo</th>
+              <th>Placa</th>
+              <th>Última Visita</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="cliente in clientes" :key="cliente.id">
+              <td>{{ cliente.nombre }}</td>
+              <td>{{ cliente.vehiculo }}</td>
+              <td>{{ cliente.placa }}</td>
+              <td>{{ cliente.ultimaVisita }}</td>
+              <td class="flex justify-center">
+                <button 
+                  @click="abrirModal(cliente)"
+                  class=" px-2 py-1 text-white bg-green-500 rounded hover:bg-green-600">
+                  Ver Detalle
+                </button>
+                <button 
+                  @click="verHistorialCompleto(cliente)"
+                  class="ml-2 px-2 py-1 text-white bg-blue-500 rounded hover:bg-blue-600">
+                  Ver Historial
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+  
+      <!-- Modal para mostrar detalle rápido -->
+      <div v-if="mostrarModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg">
+          <h2 class="text-lg font-semibold mb-4">Detalles de la Visita</h2>
+          <p><strong>Cliente:</strong> {{ clienteSeleccionado.nombre }}</p>
+          <p><strong>Vehículo:</strong> {{ clienteSeleccionado.vehiculo }}</p>
+          <p><strong>Placa:</strong> {{ clienteSeleccionado.placa }}</p>
+          <p><strong>Última Visita:</strong> {{ clienteSeleccionado.ultimaVisita }}</p>
+          <p><strong>Servicios:</strong></p>
+          <ul class="list-disc ml-6">
+            <li v-for="servicio in clienteSeleccionado.servicios" :key="servicio.id">
+              {{ servicio.nombre }} - {{ servicio.precio }} Bs.
+            </li>
+          </ul>
+          <div class="flex justify-end mt-4">
+            <button @click="cerrarModal" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
+              Cerrar
+            </button>
+          </div>
         </div>
+      </div>
     </div>
-</template>
-
-<script>
-import { onMounted } from 'vue';
-import { DataTable } from 'simple-datatables'; // Importa DataTable de simple-datatables
-
-export default {
-  setup() {
-    onMounted(() => {
-      const dataTable = new DataTable("#search-table", {
-        searchable: true,
-        sortable: false,
+  </template>
+  
+  <script>
+  import { onMounted, ref } from 'vue';
+  import { DataTable } from 'simple-datatables';
+  
+  export default {
+    setup() {
+      const searchQuery = ref('');
+      const clientes = ref([]);
+      const mostrarModal = ref(false);
+      const clienteSeleccionado = ref(null);
+  
+      // Datos simulados
+      clientes.value = [
+        { id: 1, nombre: 'Juan Pérez', vehiculo: 'Toyota Corolla', placa: 'ABC-123', ultimaVisita: '2023-12-15', servicios: [{ id: 1, nombre: 'Cambio de aceite', precio: 100 }] },
+        { id: 2, nombre: 'Ana Gómez', vehiculo: 'Nissan Versa', placa: 'XYZ-789', ultimaVisita: '2023-12-10', servicios: [{ id: 2, nombre: 'Alineación', precio: 80 }] }
+      ];
+  
+      const buscarCliente = () => {
+        // Lógica para filtrar clientes según el valor en searchQuery
+        console.log('Buscar:', searchQuery.value);
+      };
+  
+      const abrirModal = (cliente) => {
+        clienteSeleccionado.value = cliente;
+        mostrarModal.value = true;
+      };
+  
+      const cerrarModal = () => {
+        mostrarModal.value = false;
+      };
+  
+      const verHistorialCompleto = (cliente) => {
+        console.log('Ir al historial completo de:', cliente.nombre);
+        // Aquí iría la redirección a otra vista
+      };
+  
+      onMounted(() => {
+        const dataTable = new DataTable('#search-table', {
+          searchable: true,
+          sortable: true,
+          perPage: 10
+        });
       });
-    });
-  },
-};
-</script>
-
+  
+      return {
+        searchQuery,
+        clientes,
+        mostrarModal,
+        clienteSeleccionado,
+        buscarCliente,
+        abrirModal,
+        cerrarModal,
+        verHistorialCompleto
+      };
+    }
+  };
+  </script>
+  
+  <style scoped>
+  .datatable-input {
+    @apply block w-full p-2 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500;
+  }
+  </style>
+  

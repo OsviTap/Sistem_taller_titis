@@ -1,7 +1,7 @@
 const { Sequelize } = require('sequelize');
 const sequelize = require('../config/database'); // Configuración de la base de datos
 
-// Importar los modelos
+// Importar modelos
 const CajaChica = require('./CajaChica');
 const Cliente = require('./Cliente');
 const DetalleServicio = require('./DetalleServicio');
@@ -14,15 +14,20 @@ const Usuario = require('./Usuario');
 const Vehiculo = require('./Vehiculo');
 const Visita = require('./Visita');
 
-
 // Configurar las relaciones
 // Cliente y Vehículo
 Cliente.hasMany(Vehiculo, { foreignKey: 'clienteId' });
 Vehiculo.belongsTo(Cliente, { foreignKey: 'clienteId' });
 
 // Marca y Modelo
-Marca.hasMany(Modelo, { foreignKey: 'marcaId' });
-Modelo.belongsTo(Marca, { foreignKey: 'marcaId' });
+Marca.hasMany(Modelo, { 
+    foreignKey: 'marcaId',
+    sourceKey: 'nombre'
+});
+Modelo.belongsTo(Marca, { 
+    foreignKey: 'marcaId',
+    targetKey: 'nombre'
+});
 
 // Vehículo, Marca y Modelo
 Vehiculo.belongsTo(Marca, { foreignKey: 'marcaId' });
@@ -58,6 +63,5 @@ module.exports = {
     Servicio,
     Usuario,
     Vehiculo,
-    Visita,
+    Visita
 };
-

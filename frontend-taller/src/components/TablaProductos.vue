@@ -2,10 +2,11 @@
   <div>
     <!-- Tabla existente -->
     <div class="relative overflow-x-auto shadow-md sm:rounded-lg m-4">
-      <table :key="tableKey" id="filter-table" class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+      <div v-if="productos.length > 0" >
+        <table  id="filter-table" class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
         <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
           <tr>
-            <th scope="col" class="px-6 py-3">ID</th>
+            
             <th scope="col" class="px-6 py-3">Nombre</th>
             <th scope="col" class="px-6 py-3">Stock</th>
             <th scope="col" class="px-6 py-3">Precio Costo</th>
@@ -16,12 +17,12 @@
         </thead>
         <tbody>
           <tr v-for="producto in productos" :key="producto.id" class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
-            <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">{{ producto.id }}</td>
+            
             <td class="px-6 py-4">{{ producto.nombre }}</td>
             <td class="px-6 py-4">{{ producto.stock }}</td>
             <td class="px-6 py-4">{{ producto.precioCosto }}</td>
             <td class="px-6 py-4">{{ producto.precioVenta }}</td>
-            <td class="px-6 py-4">{{ producto.fechaAdquisicion }}</td>
+            <td class="px-6 py-4">{{ formatDate(producto.fechaAdquisicion) }}</td>
             <td class="px-6 py-4">
               <div class="flex items-center space-x-2">
                 <button @click="openViewModal(producto)" class="font-medium text-blue-600 dark:text-blue-500 hover:underline">
@@ -38,6 +39,8 @@
           </tr>
         </tbody>
       </table>
+      </div>
+      
     </div>
 
     <!-- Modal de Crear/Editar Producto -->
@@ -169,18 +172,17 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue';
+import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { DataTable } from 'simple-datatables';
 import axios from '@/api/axios';
 
-// Estado del componente
 const productos = ref([]);
 const showFormModal = ref(false);
 const showDeleteModal = ref(false);
 const modalMode = ref('create');
 const selectedProduct = ref(null);
-const dataTableInstance = ref(null);
-const tableKey = ref(0);
+const dataTable = ref(null);
+
 const formData = ref({
   nombre: '',
   stock: 0,
@@ -189,77 +191,61 @@ const formData = ref({
   fechaAdquisicion: ''
 });
 
-// Función para inicializar DataTable
+// Función de formateo de fecha
+const formatDate = (date) => {
+  if (!date) return '';
+  return new Date(date).toLocaleDateString('es-ES', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+};
+// Función para convertir fecha a formato ISO para el input date
+const formatDateForInput = (date) => {
+  if (!date) return '';
+  return new Date(date).toISOString().split('T')[0];
+};
+
 const initializeDataTable = async () => {
   await nextTick();
-  if (document.getElementById("filter-table")) {
-    if (dataTableInstance.value) {
-      dataTableInstance.value.destroy();
+  const table = document.getElementById("filter-table");
+  if (table && productos.value.length > 0) {
+    if (dataTable.value) {
+      dataTable.value.destroy();
     }
-
-    dataTableInstance.value = new DataTable("#filter-table", {
+    dataTable.value = new DataTable(table, {
+      perPageSelect: [5, 10, 15, 20, 25],
       labels: {
-        perPage: "productos por página",
-        placeholder: "Buscar producto...",
+        placeholder: "Buscar...",
+        perPage: "{select} registros por página",
+        noRows: "No hay registros",
+        info: "Mostrando {start} a {end} de {rows} registros",
       },
-      tableRender: (_data, table, type) => {
-        if (type === "print") {
-          return table;
-        }
-        const tHead = table.childNodes[0];
-        const filterHeaders = {
-          nodeName: "TR",
-          attributes: {
-            class: "search-filtering-row"
-          },
-          childNodes: tHead.childNodes[0].childNodes.map(
-            (_th, index) => ({
-              nodeName: "TH",
-              childNodes: [
-                {
-                  nodeName: "INPUT",
-                  attributes: {
-                    class: "datatable-input",
-                    type: "search",
-                    "data-columns": "[" + index + "]"
-                  }
-                }
-              ]
-            })
-          )
-        };
-        tHead.childNodes.push(filterHeaders);
-        return table;
-      }
     });
   }
 };
 
-// Función para actualizar la tabla
-const updateTable = async () => {
-  await fetchProductos();
-  tableKey.value += 1;
-  await nextTick();
-  await initializeDataTable();
-};
-
-// Función para obtener datos
 const fetchProductos = async () => {
   try {
     const response = await axios.get('/productos');
     productos.value = response.data;
+    await nextTick();
+    await initializeDataTable();
   } catch (error) {
     console.error('Error al obtener productos:', error);
-    alert('Error al cargar los productos');
   }
 };
 
-// Inicialización al montar el componente
-onMounted(async () => {
-  await updateTable();
+onMounted(() => {
+  fetchProductos();
 });
 
-// Funciones para manejar modales
+onBeforeUnmount(() => {
+  if (dataTable.value) {
+    dataTable.value.destroy();
+  }
+});
+
 const resetFormData = () => {
   formData.value = {
     nombre: '',
@@ -279,14 +265,20 @@ const openCreateModal = () => {
 const openEditModal = (producto) => {
   modalMode.value = 'edit';
   selectedProduct.value = producto;
-  formData.value = { ...producto };
+  formData.value = {
+    ...producto,
+    fechaAdquisicion: formatDateForInput(producto.fechaAdquisicion)
+  };
   showFormModal.value = true;
 };
 
 const openViewModal = (producto) => {
   modalMode.value = 'view';
   selectedProduct.value = producto;
-  formData.value = { ...producto };
+  formData.value = {
+    ...producto,
+    fechaAdquisicion: formatDateForInput(producto.fechaAdquisicion)
+  };
   showFormModal.value = true;
 };
 
@@ -296,30 +288,24 @@ const closeModal = () => {
   selectedProduct.value = null;
 };
 
-// Función para manejar el formulario
 const submitForm = async () => {
   try {
     if (modalMode.value === 'create') {
       await axios.post('/productos', formData.value);
+      alert('Producto creado exitosamente');
     } else if (modalMode.value === 'edit') {
       await axios.put(`/productos/${selectedProduct.value.id}`, formData.value);
+      alert('Producto actualizado exitosamente');
     }
-
     showFormModal.value = false;
     resetFormData();
-    await updateTable();
-    
-    // Emitir evento para notificar cambios
-    emit('productosActualizados');
-    
-    alert(modalMode.value === 'create' ? 'Producto creado exitosamente' : 'Producto actualizado exitosamente');
+    window.location.reload();
   } catch (error) {
-    console.error('Error al guardar producto:', error);
+    console.error('Error:', error);
     alert('Error al guardar el producto');
   }
 };
 
-// Funciones para eliminar
 const confirmarEliminacion = (producto) => {
   selectedProduct.value = producto;
   showDeleteModal.value = true;
@@ -330,15 +316,14 @@ const deleteProducto = async () => {
     await axios.delete(`/productos/${selectedProduct.value.id}`);
     showDeleteModal.value = false;
     selectedProduct.value = null;
-    await updateTable();
     alert('Producto eliminado exitosamente');
+    window.location.reload();
   } catch (error) {
-    console.error('Error al eliminar producto:', error);
+    console.error('Error:', error);
     alert('Error al eliminar el producto');
   }
 };
 
-// Exponer funciones necesarias para el componente padre
 defineExpose({
   openCreateModal,
   openEditModal,

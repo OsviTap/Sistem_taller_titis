@@ -23,4 +23,33 @@ router.get('/', async (req, res) => {
     }
 });
 
+// Actualizar una marca
+router.put('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { nombre } = req.body;
+        const marca = await Marca.findByPk(id);
+        if (marca) {
+            marca.nombre = nombre;
+            await marca.save();
+            res.json(marca);
+        } else {
+            res.status(404).json({ error: 'Marca no encontrada' });
+        }
+    } catch (err) {
+        res.status(500).json({ error: 'Error al actualizar marca' });
+    }
+});
+
+router.delete('/:id', async (req, res) => {
+    try{
+        const marca = await Marca.findByPk(req.params.id);
+        if (!marca) return res.status(404).json({ error: 'Marca no encontrada' });
+        await marca.destroy();
+        res.json({ message: 'Marca eliminada' });
+    } catch (err) {
+        res.status(500).json({ error: 'Error al eliminar marca' });
+    }
+});
+
 module.exports = router;

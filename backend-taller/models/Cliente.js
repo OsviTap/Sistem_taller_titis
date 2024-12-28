@@ -24,7 +24,7 @@ const Cliente = sequelize.define('Cliente', {
         defaultValue: 1, // Estado activo por defecto
     },
 }, {
+    tableName: 'clientes',
     timestamps: true, // createdAt y updatedAt automáticos
 });
-
 module.exports = Cliente;

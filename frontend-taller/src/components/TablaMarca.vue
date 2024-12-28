@@ -1,24 +1,25 @@
 <template>
   <div class="relative overflow-x-auto shadow-md sm:rounded-lg m-4">
+    
     <!-- Tabla -->
     <table id="filter-table" class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
       <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
         <tr>
-          <th scope="col" class="px-6 py-3">ID</th>
+          
           <th scope="col" class="px-6 py-3">Nombre</th>
           <th scope="col" class="px-6 py-3">Acciones</th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="marca in marcas" :key="marca.id" class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
-          <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">{{ marca.id }}</td>
+          
           <td class="px-6 py-4">{{ marca.nombre }}</td>
           <td class="px-6 py-4">
             <div class="flex items-center space-x-2">
               <button @click="openEditModal(marca)" class="font-medium text-yellow-600 dark:text-yellow-500 hover:underline">
                 Editar
               </button>
-              <button @click="deleteMarca(marca)" class="font-medium text-red-600 dark:text-red-500 hover:underline">
+              <button @click="deleteMarca(marca.id)" class="font-medium text-red-600 dark:text-red-500 hover:underline">
                 Eliminar
               </button>
             </div>
@@ -26,59 +27,88 @@
         </tr>
       </tbody>
     </table>
+      <!-- Modal para agregar/editar marca -->
+      <div v-if="showModal" class="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50">
+        <div class="bg-white p-6 rounded-lg shadow-lg w-96">
+          <h3 class="text-lg font-semibold mb-4">{{ isEditing ? 'Editar Marca' : 'Agregar Marca' }}</h3>
+          <input v-model="form.nombre" type="text" placeholder="Nombre" class="w-full mb-4 p-2 border rounded-lg">
+          <div class="flex justify-end space-x-2">
+            <button @click="saveMarca" class="px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-lg">
+              Guardar
+            </button>
+            <button @click="closeModal" class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg">
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
   </div>
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
+import axios from '@/api/axios';
 import { DataTable } from 'simple-datatables';
 
-const marcas = [
-  {
-    id: 1,
-    nombre: 'Marca A',
-  },
-  // ... más marcas
-];
+const marcas = ref([]);
+const showModal = ref(false);
+const isEditing = ref(false);
+const form = ref({ id: null, nombre: '' });
 
-onMounted(() => {
+
+const fetchMarcas = async () => {
+  const response = await axios.get('/marcas');
+  marcas.value = response.data;
+};
+
+const openAddModal = () => {
+  form.value = { id: null, nombre: '' };
+  isEditing.value = false;
+  showModal.value = true;
+};
+
+const openEditModal = (marca) => {
+  form.value = { ...marca };
+  isEditing.value = true;
+  showModal.value = true;
+};
+
+const closeModal = () => {
+  showModal.value = false;
+};
+
+const saveMarca = async () => {
+  if (isEditing.value) {
+    await axios.put(`/marcas/${form.value.id}`, form.value);
+  } else {
+    await axios.post('/marcas', form.value);
+    window.location.reload();
+  }
+  closeModal();
+  fetchMarcas();
+};
+
+const deleteMarca = async (id) => {
+  if (confirm('¿Estás seguro de que deseas eliminar esta marca?')) {
+    await axios.delete(`/marcas/${id}`);
+    fetchMarcas();
+  }
+};
+
+onMounted(async () => {
+  await fetchMarcas();
+
   if (document.getElementById("filter-table")) {
     const dataTable = new DataTable("#filter-table", {
       labels: {
         perPage: "marcas por página",
         placeholder: "Buscar marca...",
       },
-      tableRender: (_data, table, type) => {
-        if (type === "print") {
-          return table;
-        }
-        const tHead = table.childNodes[0];
-        const filterHeaders = {
-          nodeName: "TR",
-          attributes: {
-            class: "search-filtering-row"
-          },
-          childNodes: tHead.childNodes[0].childNodes.map(
-            (_th, index) => ({
-              nodeName: "TH",
-              childNodes: [
-                {
-                  nodeName: "INPUT",
-                  attributes: {
-                    class: "datatable-input",
-                    type: "search",
-                    "data-columns": "[" + index + "]"
-                  }
-                }
-              ]
-            })
-          )
-        };
-        tHead.childNodes.push(filterHeaders);
-        return table;
-      }
     });
   }
+});
+defineExpose({
+  openCreateModal: openAddModal,
 });
 </script>
 

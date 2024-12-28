@@ -1,5 +1,5 @@
 import './assets/main.css'
-import 'simple-datatables/dist/style.css'
+// import 'simple-datatables/dist/style.css'
 
 import { createApp } from 'vue'
 import App from './App.vue'

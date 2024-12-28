@@ -45,7 +45,7 @@ const Vehiculo = sequelize.define('Vehiculo', {
 // Relación: Un Cliente tiene muchos Vehículos
 Cliente.hasMany(Vehiculo, { foreignKey: 'clienteId' });
 Vehiculo.belongsTo(Cliente, { foreignKey: 'clienteId' });
-Vehiculo.belongsTo(Marca, { foreignKey: 'marca_id', as: 'marcas' });
-Vehiculo.belongsTo(Modelo, { foreignKey: 'modelo_id', as: 'modelo' });
+Vehiculo.belongsTo(Marca, { foreignKey: 'marcaId', as: 'marcas' });
+Vehiculo.belongsTo(Modelo, { foreignKey: 'modeloId', as: 'modelo' });
 
 module.exports = Vehiculo;

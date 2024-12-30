@@ -1,6 +1,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
+
 const Cliente = sequelize.define('Cliente', {
     nombre: {
         type: DataTypes.STRING,
@@ -27,4 +28,12 @@ const Cliente = sequelize.define('Cliente', {
     tableName: 'clientes',
     timestamps: true, // createdAt y updatedAt automáticos
 });
+// Asegúrate de que estas líneas estén en el archivo
+Cliente.associate = (models) => {
+    Cliente.hasMany(models.Vehiculo, {
+        foreignKey: 'clienteId',
+        as: 'Vehiculos'  // Nota: este nombre es importante
+    });
+};
+
 module.exports = Cliente;

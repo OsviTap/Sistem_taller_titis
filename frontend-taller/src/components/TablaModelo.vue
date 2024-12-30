@@ -48,8 +48,8 @@
               <option value="">Seleccione una marca</option>
               <option 
                 v-for="marca in marcas" 
-                :key="marca.nombre" 
-                :value="marca.nombre"
+                :key="marca.id" 
+                :value="marca.id"
               >
                 {{ marca.nombre }}
               </option>

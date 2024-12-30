@@ -5,17 +5,17 @@ const router = express.Router();
 // Crear un nuevo vehículo
 router.post('/', async (req, res) => {
     try {
-        const { cliente_id, placa, marca_id, modelo_id } = req.body;
+        const { clienteId, placa, marcaId, modeloId } = req.body;
 
-        // Verificar que la marca y modelo existen
-        const marca = await Marca.findByPk(marca_id);
-        const modelo = await Modelo.findByPk(modelo_id);
+        // Verificar existencia de marca y modelo por ID
+        const marca = await Marca.findByPk(marcaId);
+        const modelo = await Modelo.findByPk(modeloId);
 
         if (!marca || !modelo) {
             return res.status(400).json({ error: 'Marca o modelo no válido' });
         }
 
-        const vehiculo = await Vehiculo.create({ cliente_id, placa, marca_id, modelo_id });
+        const vehiculo = await Vehiculo.create({ clienteId, placa, marcaId, modeloId });
         res.status(201).json(vehiculo);
     } catch (err) {
         res.status(500).json({ error: 'Error al registrar vehículo', details: err.message });
@@ -27,8 +27,8 @@ router.get('/', async (req, res) => {
     try {
         const vehiculos = await Vehiculo.findAll({
             include: [
-                { model: Marca, as: 'marca' },
-                { model: Modelo, as: 'modelo' },
+                { model: Marca, as: 'marcaVehiculo' },  // Cambiado el alias aquí
+                { model: Modelo, as: 'modeloVehiculo' } // Cambiado el alias aquí también
             ],
         });
         res.json(vehiculos);
@@ -36,11 +36,10 @@ router.get('/', async (req, res) => {
         res.status(500).json({ error: 'Error al obtener vehículos', details: err.message });
     }
 });
-
 // Actualizar un vehículo
 router.put('/:id', async (req, res) => {
     try {
-        const { cliente_id, placa, marca_id, modelo_id } = req.body;
+        const { clienteId, placa, marcaId, modeloId } = req.body;
 
         const vehiculo = await Vehiculo.findByPk(req.params.id);
         if (!vehiculo) {
@@ -48,17 +47,17 @@ router.put('/:id', async (req, res) => {
         }
 
         // Verificar que la marca y modelo existen
-        const marca = await Marca.findByPk(marca_id);
-        const modelo = await Modelo.findByPk(modelo_id);
+        const marca = await Marca.findByPk(marcaId);
+        const modelo = await Modelo.findByPk(modeloId);
 
         if (!marca || !modelo) {
             return res.status(400).json({ error: 'Marca o modelo no válido' });
         }
 
-        vehiculo.cliente_id = cliente_id || vehiculo.cliente_id;
+        vehiculo.clienteId = clienteId || vehiculo.clienteId;
         vehiculo.placa = placa || vehiculo.placa;
-        vehiculo.marca_id = marca_id || vehiculo.marca_id;
-        vehiculo.modelo_id = modelo_id || vehiculo.modelo_id;
+        vehiculo.marcaId = marcaId || vehiculo.marcaId;
+        vehiculo.modeloId = modeloId || vehiculo.modeloId;
 
         await vehiculo.save();
         res.json(vehiculo);
@@ -82,5 +81,20 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
+// Obtener vehículos por cliente
+router.get('/cliente/:clienteId', async (req, res) => {
+    try {
+        const vehiculos = await Vehiculo.findAll({
+            where: { clienteId: req.params.clienteId },
+            include: [
+                { model: Marca, as: 'marcaVehiculo' },
+                { model: Modelo, as: 'modeloVehiculo' }
+            ]
+        });
+        res.json(vehiculos);
+    } catch (err) {
+        res.status(500).json({ error: 'Error al obtener vehículos del cliente', details: err.message });
+    }
+});
 module.exports = router;
 

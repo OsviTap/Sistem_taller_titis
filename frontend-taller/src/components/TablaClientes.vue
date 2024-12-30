@@ -40,12 +40,32 @@
         <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
           <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
             <tr>
-              <th v-for="(column, index) in columns" 
-                  :key="index" 
+              <!-- Grupo: Datos de Usuario -->
+              <th colspan="4" class="px-6 py-3 text-center border-b">Datos de Usuario</th>
+              <!-- Grupo: Vehículo -->
+              <th colspan="3" class="px-6 py-3 text-center border-b">Vehículo</th>
+              <th class="px-6 py-3 border-b">Acciones</th>
+            </tr>
+            <tr>
+              <!-- Columnas de Datos de Usuario -->
+              <th v-for="column in userColumns" 
+                  :key="column.key" 
                   scope="col" 
                   class="px-6 py-3 cursor-pointer"
-                  @click="sortBy(column.key)"
-              >
+                  @click="sortBy(column.key)">
+                <div class="flex items-center">
+                  {{ column.label }}
+                  <svg v-if="sortColumn === column.key" class="w-3 h-3 ml-1.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+                    <path :d="sortDirection === 'asc' ? 'M12 5l-8 8h16l-8-8z' : 'M12 19l-8-8h16l-8 8z'"/>
+                  </svg>
+                </div>
+              </th>
+              <!-- Columnas de Vehículo -->
+              <th v-for="column in vehicleColumns" 
+                  :key="column.key" 
+                  scope="col" 
+                  class="px-6 py-3 cursor-pointer"
+                  @click="sortBy(column.key)">
                 <div class="flex items-center">
                   {{ column.label }}
                   <svg v-if="sortColumn === column.key" class="w-3 h-3 ml-1.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
@@ -63,10 +83,29 @@
                 :key="cliente.id" 
                 class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
             >
+              <!-- Datos de Usuario -->
               <td class="px-6 py-4">{{ cliente.nombre }}</td>
               <td class="px-6 py-4">{{ cliente.direccion }}</td>
               <td class="px-6 py-4">{{ cliente.telefono }}</td>
               <td class="px-6 py-4">{{ cliente.nit }}</td>
+              <!-- Datos de Vehículo -->
+              <td class="px-6 py-4 relative">
+                  {{ cliente.Vehiculos?.[0]?.marcaVehiculo?.nombre || '-' }}
+                  <!-- Badge para múltiples vehículos -->
+                  <span v-if="cliente.Vehiculos?.length > 1"
+                        class="absolute top-2 right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full"
+                  >
+                      +{{ cliente.Vehiculos.length - 1 }}
+                  </span>
+              </td>
+              <td class="px-6 py-4">
+                  {{ cliente.Vehiculos?.[0]?.modeloVehiculo?.nombre || '-' }}
+              </td>
+              <td class="px-6 py-4">
+                  {{ cliente.Vehiculos?.[0]?.placa || '-' }}
+              </td>
+              
+              <!-- Acciones -->
               <td class="px-6 py-4">
                 <div class="flex items-center space-x-4">
                   <button @click="openViewModal(cliente)" class="text-blue-600 hover:text-blue-900">
@@ -144,11 +183,12 @@
     </div>
 
     <!-- Modal para Crear/Editar/Ver cliente -->
+    <!-- Modal para Crear/Editar/Ver cliente -->
     <div v-if="showModal" class="fixed inset-0 z-50 overflow-y-auto">
       <div class="flex items-center justify-center min-h-screen p-4">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
         
-        <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="relative bg-white rounded-lg shadow-xl max-w-4xl w-full">
           <div class="flex items-start justify-between p-4 border-b">
             <h3 class="text-xl font-semibold">
               {{ modalMode === 'create' ? 'Registrar Cliente' : 
@@ -163,45 +203,121 @@
 
           <div class="p-6">
             <form @submit.prevent="handleSubmit">
-              <div class="space-y-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700">Nombre</label>
-                  <input 
-                    type="text" 
-                    v-model="formData.nombre"
-                    :disabled="modalMode === 'view'"
-                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              <!-- Sección de datos del cliente -->
+              <div class="mb-6">
+                <h4 class="text-lg font-medium mb-4">Datos del Cliente</h4>
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700">Nombre</label>
+                    <input 
+                      type="text" 
+                      v-model="formData.nombre"
+                      :disabled="modalMode === 'view'"
+                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    >
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700">Dirección</label>
+                    <input 
+                      type="text" 
+                      v-model="formData.direccion"
+                      :disabled="modalMode === 'view'"
+                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    >
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700">Teléfono</label>
+                    <input 
+                      type="text" 
+                      v-model="formData.telefono"
+                      :disabled="modalMode === 'view'"
+                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    >
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700">NIT</label>
+                    <input 
+                      type="text" 
+                      v-model="formData.nit"
+                      :disabled="modalMode === 'view'"
+                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    >
+                  </div>
+                </div>
+              </div>
+
+              <!-- Sección de vehículos -->
+              <div class="mb-6">
+                <div class="flex justify-between items-center mb-4">
+                  <h4 class="text-lg font-medium">Vehículos</h4>
+                  <button 
+                    v-if="modalMode !== 'view'"
+                    type="button"
+                    @click="addVehicle"
+                    class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   >
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                    </svg>
+                    Agregar Vehículo
+                  </button>
                 </div>
 
-                <div>
-                  <label class="block text-sm font-medium text-gray-700">Dirección</label>
-                  <input 
-                    type="text" 
-                    v-model="formData.direccion"
-                    :disabled="modalMode === 'view'"
-                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  >
-                </div>
+                <div v-for="(vehiculo, index) in formData.vehiculos" :key="index" class="mb-4 p-4 border rounded-md relative">
+                  <div class="grid grid-cols-3 gap-4">
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700">Marca</label>
+                      <select
+                        v-model="vehiculo.marcaId"
+                        @change="loadModelosByMarca(vehiculo.marcaId, index)"
+                        :disabled="modalMode === 'view'"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      >
+                        <option value="">Seleccionar Marca</option>
+                        <option v-for="marca in marcas" :key="marca.id" :value="marca.id">
+                          {{ marca.nombre }}
+                        </option>
+                      </select>
+                    </div>
 
-                <div>
-                  <label class="block text-sm font-medium text-gray-700">Teléfono</label>
-                  <input 
-                    type="text" 
-                    v-model="formData.telefono"
-                    :disabled="modalMode === 'view'"
-                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  >
-                </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700">Modelo</label>
+                      <select
+                        v-model="vehiculo.modeloId"
+                        :disabled="modalMode === 'view' || !vehiculo.marcaId"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      >
+                        <option value="">Seleccionar Modelo</option>
+                        <option v-for="modelo in modelosPorMarca[index]" :key="modelo.id" :value="modelo.id">
+                          {{ modelo.nombre }}
+                        </option>
+                      </select>
+                    </div>
 
-                <div>
-                  <label class="block text-sm font-medium text-gray-700">NIT</label>
-                  <input 
-                    type="text" 
-                    v-model="formData.nit"
-                    :disabled="modalMode === 'view'"
-                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700">Placa</label>
+                      <input
+                        type="text"
+                        v-model="vehiculo.placa"
+                        :disabled="modalMode === 'view'"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      >
+                    </div>
+                  </div>
+
+                  <button 
+                    v-if="modalMode !== 'view' && formData.vehiculos.length > 1"
+                    type="button"
+                    @click="removeVehicle(index)"
+                    class="absolute top-2 right-2 text-red-600 hover:text-red-700"
                   >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                  </button>
                 </div>
               </div>
 
@@ -245,20 +361,82 @@ const sortColumn = ref('nombre');
 const sortDirection = ref('asc');
 const selectedClienteId = ref(null);
 
+const marcas = ref([]);
+const modelosPorMarca = ref([]);
+
 const formData = ref({
   nombre: '',
   direccion: '',
   telefono: '',
-  nit: ''
+  nit: '',
+  vehiculos: [{
+    marcaId: '',
+    modeloId: '',
+    placa: ''
+  }]
 });
 
 // Columnas de la tabla
-const columns = [
+const userColumns = [
   { key: 'nombre', label: 'Nombre' },
   { key: 'direccion', label: 'Dirección' },
   { key: 'telefono', label: 'Teléfono' },
   { key: 'nit', label: 'NIT' }
 ];
+
+const vehicleColumns = [
+  { key: 'marca', label: 'Marca' },
+  { key: 'modelo', label: 'Modelo' },
+  { key: 'placa', label: 'Placa' }
+];
+
+// Nuevas funciones para manejar vehículos
+const loadMarcas = async () => {
+  try {
+    const response = await axios.get('/marcas');
+    marcas.value = response.data;
+  } catch (error) {
+    console.error('Error al cargar marcas:', error);
+  }
+};
+
+const loadModelosByMarca = async (marcaId, index) => {
+    if (!marcaId) {
+        modelosPorMarca.value[index] = [];
+        formData.value.vehiculos[index].modeloId = '';
+        return;
+    }
+    try {
+        const response = await axios.get(`/modelos/marca/${marcaId}`);
+        modelosPorMarca.value[index] = response.data;
+        
+        // No resetear el modeloId si ya existe y es válido
+        const modeloActual = formData.value.vehiculos[index].modeloId;
+        if (modeloActual) {
+            const modeloExiste = response.data.some(m => m.id === modeloActual);
+            if (!modeloExiste) {
+                formData.value.vehiculos[index].modeloId = '';
+            }
+        }
+    } catch (error) {
+        console.error('Error al cargar modelos:', error);
+        modelosPorMarca.value[index] = [];
+    }
+};
+
+const addVehicle = () => {
+  formData.value.vehiculos.push({
+    marcaId: '',
+    modeloId: '',
+    placa: ''
+  });
+  modelosPorMarca.value.push([]);
+};
+
+const removeVehicle = (index) => {
+  formData.value.vehiculos.splice(index, 1);
+  modelosPorMarca.value.splice(index, 1);
+};
 
 // Computed properties
 const filteredClientes = computed(() => {
@@ -299,14 +477,25 @@ const totalPages = computed(() =>
 
 // Métodos
 const loadClientes = async () => {
-  try {
-    const response = await axios.get('/clientes');
-    clientes.value = response.data.filter(cliente => cliente.estado === 1);
-  } catch (error) {
-    console.error('Error al cargar clientes:', error);
-  }
+    try {
+        const response = await axios.get('/clientes');
+        clientes.value = response.data
+            .filter(cliente => cliente.estado === 1) // Solo mostrar clientes activos
+            .map(cliente => ({
+                ...cliente,
+                vehiculos: cliente.Vehiculos?.map(v => ({
+                    ...v,
+                    marca: v.marcaVehiculo?.nombre || '',
+                    modelo: v.modeloVehiculo?.nombre || '',
+                    marcaId: v.marcaId,
+                    modeloId: v.modeloId,
+                    placa: v.placa || ''
+                })) || []
+            }));
+    } catch (error) {
+        console.error('Error al cargar clientes:', error);
+    }
 };
-
 const sortBy = (column) => {
   if (sortColumn.value === column) {
     sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc';
@@ -339,22 +528,79 @@ const openCreateModal = () => {
     nombre: '',
     direccion: '',
     telefono: '',
-    nit: ''
+    nit: '',
+    vehiculos: [{
+      marcaId: '',
+      modeloId: '',
+      placa: ''
+    }]
   };
+  modelosPorMarca.value = [[]];
   showModal.value = true;
 };
 
-const openViewModal = (cliente) => {
-  modalMode.value = 'view';
-  formData.value = { ...cliente };
-  showModal.value = true;
+const openViewModal = async (cliente) => {
+    modalMode.value = 'view';
+    selectedClienteId.value = cliente.id;
+
+    const vehiculos = cliente.Vehiculos?.map(v => ({
+        marcaId: v.marcaId,
+        modeloId: v.modeloId,
+        placa: v.placa
+    })) || [{
+        marcaId: '',
+        modeloId: '',
+        placa: ''
+    }];
+
+    formData.value = {
+        ...cliente,
+        vehiculos
+    };
+
+    modelosPorMarca.value = new Array(vehiculos.length).fill([]);
+
+    // Cargar los modelos para cada vehículo que tenga marca
+    for (let i = 0; i < vehiculos.length; i++) {
+        if (vehiculos[i].marcaId) {
+            await loadModelosByMarca(vehiculos[i].marcaId, i);
+        }
+    }
+
+    showModal.value = true;
 };
 
-const openEditModal = (cliente) => {
-  modalMode.value = 'edit';
-  formData.value = { ...cliente };
-  selectedClienteId.value = cliente.id;
-  showModal.value = true;
+const openEditModal = async (cliente) => {
+    modalMode.value = 'edit';
+    selectedClienteId.value = cliente.id;
+
+    // Preparar los datos del vehículo
+    const vehiculos = cliente.Vehiculos?.map(v => ({
+        marcaId: v.marcaId,
+        modeloId: v.modeloId,
+        placa: v.placa
+    })) || [{
+        marcaId: '',
+        modeloId: '',
+        placa: ''
+    }];
+
+    formData.value = {
+        ...cliente,
+        vehiculos
+    };
+
+    // Inicializar modelosPorMarca para cada vehículo
+    modelosPorMarca.value = new Array(vehiculos.length).fill([]);
+
+    // Cargar los modelos para cada vehículo que tenga marca
+    for (let i = 0; i < vehiculos.length; i++) {
+        if (vehiculos[i].marcaId) {
+            await loadModelosByMarca(vehiculos[i].marcaId, i);
+        }
+    }
+
+    showModal.value = true;
 };
 
 const closeModal = () => {
@@ -363,41 +609,104 @@ const closeModal = () => {
     nombre: '',
     direccion: '',
     telefono: '',
-    nit: ''
+    nit: '',
+    vehiculos: [{
+      marcaId: '',
+      modeloId: '',
+      placa: ''
+    }]
   };
+  modelosPorMarca.value = [[]];
   selectedClienteId.value = null;
 };
 
 const handleSubmit = async () => {
-  try {
-    if (modalMode.value === 'create') {
-      await axios.post('/clientes', { ...formData.value, estado: 1 });
-    } else if (modalMode.value === 'edit') {
-      await axios.put(`/clientes/${selectedClienteId.value}`, formData.value);
+    try {
+        // Validar que los campos requeridos estén llenos
+        if (!formData.value.nombre || !formData.value.telefono) {
+            alert('Por favor complete los campos requeridos');
+            return;
+        }
+
+        // Validar que los vehículos tengan los datos necesarios
+        const vehiculosValidos = formData.value.vehiculos.every(v => 
+            v.marcaId && v.modeloId && v.placa
+        );
+
+        if (!vehiculosValidos) {
+            alert('Por favor complete todos los datos del vehículo');
+            return;
+        }
+
+        const clienteData = {
+            nombre: formData.value.nombre,
+            direccion: formData.value.direccion,
+            telefono: formData.value.telefono,
+            nit: formData.value.nit,
+            Vehiculos: formData.value.vehiculos.map(v => ({
+                marcaId: parseInt(v.marcaId),    // Asegurarse de que sean números
+                modeloId: parseInt(v.modeloId),  // Asegurarse de que sean números
+                placa: v.placa
+            }))
+        };
+
+        console.log('Datos a enviar:', clienteData); // Para debug
+
+        let response;
+        if (modalMode.value === 'create') {
+            response = await axios.post('/clientes', clienteData);
+        } else if (modalMode.value === 'edit') {
+            response = await axios.put(`/clientes/${selectedClienteId.value}`, clienteData);
+        }
+
+        console.log('Respuesta del servidor:', response.data); // Para debug
+        
+        await loadClientes();
+        closeModal();
+    } catch (error) {
+        console.error('Error completo:', error);
+        console.error('Detalles del error:', error.response?.data);
+        alert(`Error al guardar los datos: ${error.response?.data?.details || error.message}`);
     }
-    await loadClientes();
-    closeModal();
-  } catch (error) {
-    console.error('Error al guardar cliente:', error);
-  }
 };
 
 const deleteCliente = async (cliente) => {
-  if (confirm('¿Está seguro de eliminar este cliente?')) {
     try {
-      await axios.put(`/clientes/${cliente.id}`, { ...cliente, estado: 0 });
-      await loadClientes();
+        if (!confirm('¿Está seguro de eliminar este cliente?')) {
+            return;
+        }
+
+        console.log('Eliminando cliente:', cliente.id); // Para debug
+
+        const response = await axios.delete(`/clientes/${cliente.id}`);
+        
+        if (response.status === 200) {
+            // Actualizar la lista de clientes
+            await loadClientes();
+            alert('Cliente eliminado correctamente');
+        }
     } catch (error) {
-      console.error('Error al eliminar cliente:', error);
+        console.error('Error al eliminar cliente:', error);
+        alert('Error al eliminar el cliente');
     }
-  }
 };
 
 // Watch para resetear la página cuando cambia la búsqueda
 watch(searchTerm, () => {
   currentPage.value = 1;
 });
-
+// Agregar este watch para vigilar cambios en las marcas de los vehículos
+watch(
+    () => formData.value.vehiculos,
+    (newVehiculos) => {
+        newVehiculos.forEach((vehiculo, index) => {
+            if (vehiculo.marcaId) {
+                loadModelosByMarca(vehiculo.marcaId, index);
+            }
+        });
+    },
+    { deep: true }
+);
 // Watch para resetear la página cuando cambia items por página
 watch(itemsPerPage, () => {
   currentPage.value = 1;
@@ -406,6 +715,7 @@ watch(itemsPerPage, () => {
 // Cargar datos al montar el componente
 onMounted(() => {
   loadClientes();
+  loadMarcas();
 });
 
 // Exponer método para abrir modal de creación al componente padre

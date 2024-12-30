@@ -1,33 +1,46 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
-const Cliente = require('./Cliente');
 const Marca = require('./Marca');
 const Modelo = require('./Modelo');
+const Cliente = require('./Cliente');
 
 const Vehiculo = sequelize.define('Vehiculo', {
-    cliente_id: {
+    clienteId: {
         type: DataTypes.INTEGER,
         allowNull: false,
+        field:'clienteId',
+        references: {
+            model: Cliente,
+            key: 'id',
+        },
     },
-    marca: {
-        type: DataTypes.STRING,
-        allowNull: false,
-    },
-    marca_id: {
+    marcaId: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true,
+        field:'marcaId',
         references: {
             model: Marca,
             key: 'id',
         },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE',
     },
-    modelo_id: {
+    modeloId: {
         type: DataTypes.INTEGER,
         allowNull: false,
+        field:'modeloId',
         references: {
             model: Modelo,
             key: 'id',
         },
+    },
+    placa: {
+        type: DataTypes.STRING,
+        allowNull: false,
+    },
+    estado: {
+        type: DataTypes.INTEGER,
+        defaultValue: 1
     },
     createdAt: {
         type: DataTypes.DATE,
@@ -41,11 +54,5 @@ const Vehiculo = sequelize.define('Vehiculo', {
     tableName: 'vehiculos',
     timestamps: true,
 });
-
-// Relación: Un Cliente tiene muchos Vehículos
-Cliente.hasMany(Vehiculo, { foreignKey: 'clienteId' });
-Vehiculo.belongsTo(Cliente, { foreignKey: 'clienteId' });
-Vehiculo.belongsTo(Marca, { foreignKey: 'marcaId', as: 'marcas' });
-Vehiculo.belongsTo(Modelo, { foreignKey: 'modeloId', as: 'modelo' });
 
 module.exports = Vehiculo;

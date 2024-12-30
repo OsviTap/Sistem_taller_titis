@@ -16,22 +16,31 @@ const Visita = require('./Visita');
 
 // Configurar las relaciones
 // Cliente y Vehículo
-Cliente.hasMany(Vehiculo, { foreignKey: 'clienteId' });
+Cliente.hasMany(Vehiculo, { 
+    foreignKey: 'clienteId',
+    as: 'Vehiculos'
+});
 Vehiculo.belongsTo(Cliente, { foreignKey: 'clienteId' });
 
 // Marca y Modelo
 Marca.hasMany(Modelo, { 
-    foreignKey: 'marcaId',
-    sourceKey: 'nombre'
+    foreignKey: 'marcaId', // Usa el ID como referencia
+    as: 'modelos' 
 });
-Modelo.belongsTo(Marca, { 
+Modelo.belongsTo(Marca, {
     foreignKey: 'marcaId',
-    targetKey: 'nombre'
+    as: 'marcaModelo'  // Cambiado el alias
 });
 
 // Vehículo, Marca y Modelo
-Vehiculo.belongsTo(Marca, { foreignKey: 'marcaId' });
-Vehiculo.belongsTo(Modelo, { foreignKey: 'modeloId' });
+Vehiculo.belongsTo(Marca, {
+    foreignKey: 'marcaId',
+    as: 'marcaVehiculo' // Cambiado el alias
+});
+Vehiculo.belongsTo(Modelo, { 
+    foreignKey: 'modeloId', 
+    as: 'modeloVehiculo' // Cambiar el alias a uno único
+});
 
 // Historial de Visitas y Cliente/Vehículo
 HistorialVisita.belongsTo(Cliente, { foreignKey: 'clienteId' });

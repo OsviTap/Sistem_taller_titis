@@ -1,50 +1,33 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
-const Marca = require('./Marca'); // Cambiado de Marcas a Marca
+const Marca = require('./Marca');
 
-const Modelo = sequelize.define('Modelo', { // Cambiado de Modelos a Modelo
-    id: {
+const Modelo = sequelize.define('Modelo', {
+    id: {  // Clave primaria explícita
         type: DataTypes.INTEGER,
-        primaryKey: true,
         autoIncrement: true,
-    },
-    marcaId: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        references: {
-            model: Marca,
-            key: 'nombre',
-        },
-        validate: {
-            notNull: {
-                msg: 'La marca es requerida'
-            },
-            notEmpty: {
-                msg: 'La marca no puede estar vacía'
-            }
-        }
+        primaryKey: true
     },
     nombre: {
         type: DataTypes.STRING,
-        allowNull: false,
-        validate: {
-            notNull: {
-                msg: 'El nombre es requerido'
-            },
-            notEmpty: {
-                msg: 'El nombre no puede estar vacío'
-            }
-        }
+        allowNull: false
     },
+    marcaId: { // Clave foránea
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'marcas',  // Nombre de la tabla referenciada
+            key: 'id'         // Clave primaria de Marca
+        }
+    }
 }, {
     tableName: 'modelos',
-    timestamps: true,
+    timestamps: true
 });
 
-// Definir la relación
-Modelo.belongsTo(Marca, { 
+// Relación con Marca
+Modelo.belongsTo(Marca, {
     foreignKey: 'marcaId',
-    targetKey: 'nombre',
     as: 'marca'
 });
 

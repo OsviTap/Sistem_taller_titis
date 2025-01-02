@@ -1,31 +1,54 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
-const Cliente = require('./Cliente');
-const Vehiculo = require('./Vehiculo');
-const Servicio = require('./Servicio');
 
 const Visita = sequelize.define('Visita', {
+    clienteId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'clientes',
+            key: 'id'
+        }
+    },
+    vehiculoId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'vehiculos',
+            key: 'id'
+        }
+    },
     fecha: {
         type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW,
+        allowNull: false,
+        defaultValue: DataTypes.NOW
     },
-    proximaFecha: {
-        type: DataTypes.DATE,
-        allowNull: true,
+    kilometraje: {
+        type: DataTypes.INTEGER,
+        allowNull: false
     },
+    proximoCambio: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+    },
+    tipoPago: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: 'Efectivo'
+    },
+    descuento: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+        defaultValue: 0
+    },
+    total: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+        defaultValue: 0
+    }
 }, {
-    timestamps: true,
+    tableName: 'visitas',
+    timestamps: true
 });
-
-// Relación: Una Visita pertenece a un Cliente y un Vehículo
-Cliente.hasMany(Visita, { foreignKey: 'clienteId' });
-Visita.belongsTo(Cliente, { foreignKey: 'clienteId' });
-
-Vehiculo.hasMany(Visita, { foreignKey: 'vehiculoId' });
-Visita.belongsTo(Vehiculo, { foreignKey: 'vehiculoId' });
-
-// Relación: Una Visita tiene muchos Servicios
-Visita.belongsToMany(Servicio, { through: 'VisitaServicios' });
-Servicio.belongsToMany(Visita, { through: 'VisitaServicios' });
 
 module.exports = Visita;

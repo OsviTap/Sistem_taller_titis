@@ -7,7 +7,16 @@ const sequelize = new Sequelize(
     {
         host: process.env.DB_HOST,
         dialect: 'mysql',
+        timezone: '-04:00', // Zona horaria Bolivia (GMT-4)
+        dialectOptions: {
+            useUTC: false, // No usar UTC para guardar fechas
+            dateStrings: true, // Devolver fechas como strings
+            typeCast: true, // Forzar las fechas en la zona horaria configurada
+        },
+        
     }
+    
+    
 );
 
 module.exports = sequelize;

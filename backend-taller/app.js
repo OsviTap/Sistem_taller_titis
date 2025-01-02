@@ -10,11 +10,14 @@ const jwt = require('jsonwebtoken');
 const { Usuario } = require('./models');
 const router = express.Router();
 const sequelize = require('./config/database');
-
-
-
 var app = express();
 const PORT = process.env.PORT || 3001;
+
+
+
+
+
+
 
 
 const JWT_SECRET = 'secreto_super_seguro'; // Usar variables de entorno en producción
@@ -30,6 +33,8 @@ const usuarioRoutes = require('./routes/usuarios');
 const historialRoutes = require('./routes/historial');
 const visitaRoutes = require('./routes/visitas');
 const cajaChicaRoutes = require('./routes/cajaChica');
+const detalleVisitasRouter = require('./routes/detalleVisitas');
+const historialProductosRouter = require('./routes/historialProductos');
 
 
 // Sincronizar modelos y base de datos
@@ -48,34 +53,6 @@ const cajaChicaRoutes = require('./routes/cajaChica');
     }
 })();
 
-// Registro de usuario
-router.post('/register', async (req, res) => {
-    try {
-        const { nombre, email, password, rol } = req.body;
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const usuario = await Usuario.create({ nombre, email, password: hashedPassword, rol });
-        res.status(201).json({ message: 'Usuario registrado exitosamente', usuario });
-    } catch (err) {
-        res.status(500).json({ error: 'Error al registrar usuario', details: err.message });
-    }
-});
-
-// Login
-router.post('/login', async (req, res) => {
-    try {
-        const { email, password } = req.body;
-        const usuario = await Usuario.findOne({ where: { email } });
-
-        if (!usuario || !(await bcrypt.compare(password, usuario.password))) {
-            return res.status(401).json({ error: 'Credenciales inválidas' });
-        }
-
-        const token = jwt.sign({ id: usuario.id, rol: usuario.rol }, JWT_SECRET, { expiresIn: '1d' });
-        res.json({ message: 'Inicio de sesión exitoso', token });
-    } catch (err) {
-        res.status(500).json({ error: 'Error al iniciar sesión', details: err.message });
-    }
-});
 
 
 
@@ -99,9 +76,22 @@ app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/historiales', historialRoutes);
 app.use('/api/visitas', visitaRoutes);
 app.use('/api/caja-chica', cajaChicaRoutes);
+app.use('/api/detalle-visitas', detalleVisitasRouter);
+app.use('/api/historial-productos', historialProductosRouter);
+
+
+const http = require('http').createServer(app);
+const io = require('socket.io')(http, {
+    cors: {
+        origin: "http://localhost:5173", // URL de tu frontend
+        methods: ["GET", "POST"]
+    }
+});
+
+app.set('io', io);
 
 // Listener
-app.listen(PORT, () => {
+http.listen(PORT, () => { // Cambia app.listen a http.listen
     console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
 

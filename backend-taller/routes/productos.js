@@ -5,10 +5,14 @@ const router = express.Router();
 // Obtener todos los productos
 router.get('/', async (req, res) => {
     try {
-        const productos = await Producto.findAll();
+        const productos = await Producto.findAll({
+            attributes: ['id', 'nombre', 'stock','precioCosto', 'precioVenta', 'fechaAdquisicion']
+        });
+        console.log('Productos encontrados:', JSON.stringify(productos, null, 2));
         res.json(productos);
     } catch (err) {
-        res.status(500).json({ error: 'Error al obtener productos' });
+        console.error('Error al obtener productos:', err);
+        res.status(500).json({ error: 'Error al obtener productos', details: err.message });
     }
 });
 

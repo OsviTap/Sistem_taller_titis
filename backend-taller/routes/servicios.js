@@ -5,10 +5,14 @@ const router = express.Router();
 // Obtener todos los servicios
 router.get('/', async (req, res) => {
     try {
-        const servicios = await Servicio.findAll();
+        const servicios = await Servicio.findAll({
+            attributes: ['id', 'nombre', 'precio', 'descripcion']
+        });
+        console.log('Servicios encontrados:', JSON.stringify(servicios, null, 2));
         res.json(servicios);
     } catch (err) {
-        res.status(500).json({ error: 'Error al obtener servicios' });
+        console.error('Error al obtener servicios:', err);
+        res.status(500).json({ error: 'Error al obtener servicios', details: err.message });
     }
 });
 

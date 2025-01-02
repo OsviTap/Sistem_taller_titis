@@ -172,9 +172,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, onMounted, onBeforeUnmount, nextTick, onUnmounted } from 'vue';
 import { DataTable } from 'simple-datatables';
 import axios from '@/api/axios';
+import { io } from 'socket.io-client';
 
 const productos = ref([]);
 const showFormModal = ref(false);
@@ -182,6 +183,7 @@ const showDeleteModal = ref(false);
 const modalMode = ref('create');
 const selectedProduct = ref(null);
 const dataTable = ref(null);
+const socket = io('http://localhost:3001');
 
 const formData = ref({
   nombre: '',
@@ -190,6 +192,16 @@ const formData = ref({
   precioVenta: 0,
   fechaAdquisicion: ''
 });
+
+// Función para cargar productos
+const cargarProductos = async () => {
+    try {
+        const response = await axios.get('/productos');
+        productos.value = response.data;
+    } catch (error) {
+        console.error('Error al cargar productos:', error);
+    }
+};
 
 // Función de formateo de fecha
 const formatDate = (date) => {
@@ -238,6 +250,18 @@ const fetchProductos = async () => {
 
 onMounted(() => {
   fetchProductos();
+  cargarProductos();
+    
+    // Escuchar actualizaciones de stock
+    socket.on('stockUpdated', () => {
+        cargarProductos();
+    });
+});
+
+// Limpiar socket al desmontar
+onUnmounted(() => {
+    socket.off('stockUpdated');
+    socket.disconnect();
 });
 
 onBeforeUnmount(() => {

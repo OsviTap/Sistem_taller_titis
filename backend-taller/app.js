@@ -4,36 +4,56 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-require('dotenv').config();
-
-const clientesRoutes = require('./routes/clientes');
-const vehiculosRoutes = require('./routes/vehiculos');
-const serviciosRoutes = require('./routes/servicios');
-const visitasRoutes = require('./routes/visitas');
-const productosRoutes = require('./routes/productos');
-const usuariosRoutes = require('./routes/usuarios');
-
-//Sincronizacion de modelos
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const { Usuario } = require('./models');
+const router = express.Router();
 const sequelize = require('./config/database');
-const Usuario = require('./models/Usuario');
-const Cliente = require('./models/Cliente');
-const Vehiculo = require('./models/Vehiculo');
-const Servicio = require('./models/Servicio');
-const Visita = require('./models/Visita');
-const Producto = require('./models/Producto');
-
-sequelize.sync({ alter: true })
-    .then(() => console.log('Modelos sincronizados con la base de datos.'))
-    .catch(err => console.error('Error al sincronizar los modelos:', err));
-
-
-
-
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
-
 var app = express();
 const PORT = process.env.PORT || 3001;
+
+require('dotenv').config();
+const JWT_SECRET = process.env.JWT_SECRET || 'CarServiceTitisSistema';
+
+
+
+
+
+
+
+// Rutas
+const clienteRoutes = require('./routes/clientes');
+const vehiculoRoutes = require('./routes/vehiculos');
+const marcaRoutes = require('./routes/marcas');
+const modeloRoutes = require('./routes/modelos');
+const productoRoutes = require('./routes/productos');
+const servicioRoutes = require('./routes/servicios');
+const usuarioRoutes = require('./routes/usuarios');
+const historialRoutes = require('./routes/historial');
+const visitaRoutes = require('./routes/visitas');
+const cajaChicaRoutes = require('./routes/cajaChica');
+const detalleVisitasRouter = require('./routes/detalleVisitas');
+const historialProductosRouter = require('./routes/historialProductos');
+
+
+// Sincronizar modelos y base de datos
+(async () => {
+    try {
+        console.log('Iniciando sincronización de la base de datos...');
+        await sequelize.authenticate();
+        console.log('Conexión a la base de datos establecida.');
+
+        // Sincronización de modelos (actualizar estructura)
+        await sequelize.sync(); 
+        console.log('Modelos sincronizados correctamente.');
+
+    } catch (error) {
+        console.error('Error al sincronizar la base de datos:', error);
+    }
+})();
+
+
+
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -45,15 +65,32 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Registrar rutas
-app.use('/api/clientes', clientesRoutes);
-app.use('/api/vehiculos', vehiculosRoutes);
-app.use('/api/servicios', serviciosRoutes);
-app.use('/api/visitas', visitasRoutes);
-app.use('/api/productos', productosRoutes);
-app.use('/api/usuarios', usuariosRoutes);
+app.use('/api/clientes', clienteRoutes);
+app.use('/api/vehiculos', vehiculoRoutes);
+app.use('/api/marcas', marcaRoutes);
+app.use('/api/modelos', modeloRoutes);
+app.use('/api/productos', productoRoutes);
+app.use('/api/servicios', servicioRoutes);
+app.use('/api/usuarios', usuarioRoutes);
+app.use('/api/historiales', historialRoutes);
+app.use('/api/visitas', visitaRoutes);
+app.use('/api/caja-chica', cajaChicaRoutes);
+app.use('/api/detalle-visitas', detalleVisitasRouter);
+app.use('/api/historial-productos', historialProductosRouter);
+
+
+const http = require('http').createServer(app);
+const io = require('socket.io')(http, {
+    cors: {
+        origin: "http://localhost:5173", // URL de tu frontend
+        methods: ["GET", "POST"]
+    }
+});
+
+app.set('io', io);
 
 // Listener
-app.listen(PORT, () => {
+http.listen(PORT, () => { // Cambia app.listen a http.listen
     console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
 

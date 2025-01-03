@@ -2,7 +2,7 @@ const express = require('express');
 const Usuario = require('../models/Usuario');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 
 // Middleware de autenticación
 const authenticateToken = (req, res, next) => {

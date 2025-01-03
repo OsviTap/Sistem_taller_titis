@@ -3,8 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "node ./bin/www",
-    "postinstall": "npm rebuild bcrypt --build-from-source"
+    "dev": "node ./bin/www"
+    
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.47.10",

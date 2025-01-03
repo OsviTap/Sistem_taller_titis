@@ -10,7 +10,7 @@ const { Usuario } = require('./models');
 const router = express.Router();
 const sequelize = require('./config/database');
 var app = express();
-const PORT = process.env.PORT || 3001;
+// const PORT = process.env.PORT || 3001;
 
 require('dotenv').config();
 const JWT_SECRET = process.env.JWT_SECRET || 'CarServiceTitisSistema';
@@ -78,20 +78,29 @@ app.use('/api/caja-chica', cajaChicaRoutes);
 app.use('/api/detalle-visitas', detalleVisitasRouter);
 app.use('/api/historial-productos', historialProductosRouter);
 
-
-const http = require('http').createServer(app);
-const io = require('socket.io')(http, {
+const io = require('socket.io')(server, {
     cors: {
-        origin: "http://localhost:5173", // URL de tu frontend
+        origin: "http://localhost:5173",
         methods: ["GET", "POST"]
     }
 });
 
+// const http = require('http').createServer(app);
+// const io = require('socket.io')(http, {
+//     cors: {
+//         origin: "http://localhost:5173", 
+//         methods: ["GET", "POST"]
+//     }
+// });
+
 app.set('io', io);
 
 // Listener
-http.listen(PORT, () => { // Cambia app.listen a http.listen
-    console.log(`Servidor corriendo en http://localhost:${PORT}`);
-});
+// http.listen(PORT, () => { // Cambia app.listen a http.listen
+//     console.log(`Servidor corriendo en http://localhost:${PORT}`);
+// });
 
 module.exports = app;
+server.listen(port);
+server.on('error', onError);
+server.on('listening', onListening);

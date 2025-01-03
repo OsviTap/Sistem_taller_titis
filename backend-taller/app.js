@@ -78,12 +78,12 @@ app.use('/api/caja-chica', cajaChicaRoutes);
 app.use('/api/detalle-visitas', detalleVisitasRouter);
 app.use('/api/historial-productos', historialProductosRouter);
 
-const io = require('socket.io')(server, {
-    cors: {
-        origin: "http://localhost:5173",
-        methods: ["GET", "POST"]
-    }
-});
+// const io = require('socket.io')(server, {
+//     cors: {
+//         origin: "http://localhost:5173",
+//         methods: ["GET", "POST"]
+//     }
+// });
 
 // const http = require('http').createServer(app);
 // const io = require('socket.io')(http, {
@@ -93,14 +93,17 @@ const io = require('socket.io')(server, {
 //     }
 // });
 
-app.set('io', io);
+//app.set('io', io);
 
 // Listener
 // http.listen(PORT, () => { // Cambia app.listen a http.listen
 //     console.log(`Servidor corriendo en http://localhost:${PORT}`);
 // });
 
+let io;
+app.setIO = function(socketIO) {
+    io = socketIO;
+    app.set('io', io);
+};
+
 module.exports = app;
-server.listen(port);
-server.on('error', onError);
-server.on('listening', onListening);

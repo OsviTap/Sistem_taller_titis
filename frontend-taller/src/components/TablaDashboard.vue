@@ -1,49 +1,53 @@
 <template>
-  <div class="max-w-full bg-white rounded-lg shadow dark:bg-gray-800 p-4 md:p-6">
-    <!-- Búsqueda y filtros -->
-    <div class="mb-4">
-      <input
-        v-model="searchQuery"
-        type="text"
-        placeholder="Buscar cliente, vehículo o placa..."
-        class="w-full p-2 border rounded"
-      />
-    </div>
+  <div class="max-w-full bg-white rounded-lg shadow dark:bg-gray-800 p-4 md:p-6 h-full">
+  <!-- Search bar -->
+  <div class="mb-4">
+    <input
+      v-model="searchQuery"
+      type="text"
+      placeholder="Buscar cliente, vehículo o placa..."
+      class="w-full p-3 border rounded-lg shadow-sm"
+    />
+  </div>
 
-    <!-- Tabla con resultados -->
-    <div class="overflow-x-auto">
-      <table id="search-table">
-        <thead>
-          <tr>
-            <th>Cliente</th>
-            <th>Vehículo</th>
-            <th>Placa</th>
-            <th>Última Visita</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="cliente in paginatedClientes" :key="cliente.id">
-            <td>{{ cliente.Cliente?.nombre }}</td>
-            <td>{{ formatVehiculo(cliente.Vehiculo) }}</td>
-            <td>{{ cliente.Vehiculo?.placa }}</td>
-            <td>{{ formatDate(cliente.fecha) }}</td>
-            <td class="flex gap-2">
+  <!-- Table container -->
+  <div class="overflow-x-auto h-[calc(100%-100px)]">
+    <table class="w-full table-auto">
+      <thead class="sticky top-0 bg-gray-50 dark:bg-gray-700">
+        <tr>
+          <th class="px-6 py-3 text-left">Cliente</th>
+          <th class="px-6 py-3 text-left">Vehículo</th>
+          <th class="px-6 py-3 text-left">Placa</th>
+          <th class="px-6 py-3 text-left">Última Visita</th>
+          <th class="px-6 py-3 text-left min-w-[200px]">Acciones</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+        <tr v-for="cliente in paginatedClientes" 
+            :key="cliente.id"
+            class="hover:bg-gray-50 dark:hover:bg-gray-700">
+          <td class="px-6 py-4 whitespace-nowrap">{{ cliente.Cliente?.nombre }}</td>
+          <td class="px-6 py-4 whitespace-nowrap">{{ formatVehiculo(cliente.Vehiculo) }}</td>
+          <td class="px-6 py-4 whitespace-nowrap">{{ cliente.Vehiculo?.placa }}</td>
+          <td class="px-6 py-4 whitespace-nowrap">{{ formatDate(cliente.fecha) }}</td>
+          <td class="px-6 py-4">
+            <div class="flex gap-2">
               <button 
                 @click="verUltimaVisita(cliente)"
-                class="px-2 py-1 text-white bg-green-500 rounded hover:bg-green-600">
+                class="px-3 py-1.5 text-sm text-white bg-green-500 rounded-lg hover:bg-green-600 transition-colors">
                 Ver Última Visita
               </button>
               <button 
                 @click="verHistorialVehiculo(cliente)"
-                class="px-2 py-1 text-white bg-blue-500 rounded hover:bg-blue-600">
+                class="px-3 py-1.5 text-sm text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors">
                 Historial Vehículo
               </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 
     <!-- Paginación -->
     <div class="mt-4 flex justify-between items-center">

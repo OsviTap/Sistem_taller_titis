@@ -33,7 +33,7 @@
           <!-- Fecha -->
           <div>
             <label for="fecha" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Fecha</label>
-            <input type="text" id="fecha" v-model="fechaFormateada" class="input-text" disabled />
+            <input type="date" id="fecha" v-model="fechaFormateada" class="input-text" />
           </div>
   
           <!-- Kilometraje Actual -->
@@ -258,9 +258,11 @@ const showProductosList = ref(false);
 // Referencias para los datos del formulario
 const fechaActual = ref(new Date());
 
-const fechaFormateada = computed(() => {
-    return formatDate(fechaActual.value);
-});
+const fechaFormateada = ref(new Date().toISOString().split('T')[0]);
+
+// computed(() => {
+//     return formatDate(fechaActual.value);
+// });
 const formatDate = (dateString) => {
   return new Date(dateString).toLocaleDateString('es-ES', {
     year: 'numeric',
@@ -439,7 +441,7 @@ const guardarVisita = async () => {
         const visitaData = {
             clienteId: clienteSeleccionado.value,
             vehiculoId: vehiculoSeleccionado.value,
-            fecha: fechaActual.value,
+            fecha: new Date(fechaFormateada.value),
             kilometraje: kilometraje.value,
             proximoCambio: proximoCambio.value,
             tipoPago: tipoPago.value,

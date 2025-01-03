@@ -79,6 +79,60 @@ router.get('/', async (req, res) => {
     }
 });
 
+router.get('/totales', async (req, res) => {
+    try {
+        const { periodo } = req.query;
+        let fechaInicio = new Date();
+        
+        switch(periodo) {
+            case 'day':
+                fechaInicio.setHours(0,0,0,0);
+                break;
+            case 'week':
+                fechaInicio.setDate(fechaInicio.getDate() - 7);
+                break;
+            case 'month':
+                fechaInicio.setMonth(fechaInicio.getMonth() - 1);
+                break;
+            case 'year':
+                fechaInicio.setFullYear(fechaInicio.getFullYear() - 1);
+                break;
+        }
+
+        const historial = await ProductHistory.findAll({
+            where: {
+                fechaSalida: {
+                    [Op.gte]: fechaInicio
+                }
+            },
+            attributes: [
+                'precioVenta',
+                'precioCosto',
+                'cantidad',
+                'descuento',
+                'ganancia'
+            ]
+        });
+
+        const totales = historial.reduce((acc, curr) => ({
+            totalVendido: acc.totalVendido + (parseFloat(curr.precioVenta) * curr.cantidad),
+            totalCosto: acc.totalCosto + (parseFloat(curr.precioCosto) * curr.cantidad),
+            totalDescuento: acc.totalDescuento + (parseFloat(curr.descuento || 0)),
+            gananciaTotal: acc.gananciaTotal + parseFloat(curr.ganancia || 0)
+        }), {
+            totalVendido: 0,
+            totalCosto: 0,
+            totalDescuento: 0,
+            gananciaTotal: 0
+        });
+
+        res.json(totales);
+    } catch (err) {
+        console.error('Error al obtener totales:', err);
+        res.status(500).json({ error: 'Error al obtener totales' });
+    }
+});
+
 // Crear registro en historial
 router.post('/', async (req, res) => {
     try {

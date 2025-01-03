@@ -3,7 +3,15 @@
     <!-- Header -->
     <div class="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
       <h1 class="text-2xl font-bold text-gray-800 dark:text-white">Historial de Visitas</h1>
-      
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Buscador</label>
+      <input
+        type="text"
+        v-model="searchQuery"
+        placeholder="Buscar por cliente, vehículo, placa..."
+        class="w-full p-2  text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+      />
+    </div>
       <!-- Filtros -->
       <div class="flex gap-4">
         <div class="w-64">
@@ -64,10 +72,10 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-if="visitas.length === 0">
+          <tr v-if="visitasFiltradas.length === 0">
             <td colspan="7" class="text-center px-6 py-4">No hay registros disponibles.</td>
           </tr>
-          <tr v-for="visita in visitasFiltradas" :key="visita.id" class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+          <tr v-for="visita in visitasFiltradasBusqueda" :key="visita.id" class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
             <td class="px-6 py-4">{{ formatDate(visita.fecha) }}</td>
             <td class="px-6 py-4">{{ visita.Cliente ? visita.Cliente.nombre : 'Sin Cliente' }}</td>
             <td class="px-6 py-4">{{ visita.Vehiculo ? visita.Vehiculo.placa : 'Sin Vehículo' }}</td>
@@ -86,6 +94,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
 import { DataTable } from 'simple-datatables';
 import axios from '@/api/axios';
 import jsPDF from 'jspdf';
@@ -95,6 +104,8 @@ const visitas = ref([]);
 const clienteFilter = ref('');
 const fechaInicio = ref('');
 const fechaFin = ref('');
+const route = useRoute();
+const searchQuery = ref('');
 
 const obtenerClientes = async () => {
   try {
@@ -104,6 +115,22 @@ const obtenerClientes = async () => {
     console.error('Error al cargar clientes:', error);
   }
 };
+
+// Agregar nuevo computed para búsqueda
+const visitasFiltradasBusqueda = computed(() => {
+  return visitasFiltradas.value.filter(visita => {
+    const busqueda = searchQuery.value.toLowerCase();
+    return (
+      visita.Cliente?.nombre?.toLowerCase().includes(busqueda) ||
+      visita.Vehiculo?.placa?.toLowerCase().includes(busqueda) ||
+      `${visita.Vehiculo?.marcaVehiculo?.nombre} ${visita.Vehiculo?.modeloVehiculo?.nombre}`
+        .toLowerCase()
+        .includes(busqueda) ||
+      visita.kilometraje?.toString().includes(busqueda) ||
+      visita.total?.toString().includes(busqueda)
+    );
+  });
+});
 
 const visitasFiltradas = computed(() => {
   return visitas.value.filter(visita => {
@@ -118,8 +145,21 @@ const visitasFiltradas = computed(() => {
     const cumpleFechaFin = fechaFin.value
       ? new Date(visita.fecha) <= new Date(fechaFin.value)
       : true;
+    // Nuevos filtros por parámetros de URL
+    const cumpleFechaEspecifica = route.query.fecha
+      ? visita.fecha === route.query.fecha
+      : true;
 
-    return cumpleCliente && cumpleFechaInicio && cumpleFechaFin;
+    const cumpleClienteId = route.query.clienteId
+      ? visita.clienteId === parseInt(route.query.clienteId)
+      : true;
+
+    const cumpleVehiculoId = route.query.vehiculoId
+      ? visita.vehiculoId === parseInt(route.query.vehiculoId)
+      : true;
+
+    return cumpleCliente && cumpleFechaInicio && cumpleFechaFin && 
+           cumpleFechaEspecifica && cumpleClienteId && cumpleVehiculoId;
   });
 });
 

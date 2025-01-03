@@ -28,7 +28,7 @@ export default {
  <div class="flex flex-col h-screen" v-if="route.path !== '/login'">
     <Navbar @toggle-sidebar="toggleSidebar" />
     <Sidebar :isOpen="isSidebarOpen" />
-    <main class="sm:ml-64 flex-1 mt-5 p-12 bg-gray-100 transition-transform">
+    <main class="sm:ml-64 flex-1 mt-5 p-12 bg-gray-100 dark:bg-gray-700 transition-transform">
       <RouterView />
     </main>
   </div>

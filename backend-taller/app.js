@@ -4,7 +4,6 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-require('dotenv').config();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { Usuario } = require('./models');
@@ -13,14 +12,14 @@ const sequelize = require('./config/database');
 var app = express();
 const PORT = process.env.PORT || 3001;
 
+require('dotenv').config();
+const JWT_SECRET = process.env.JWT_SECRET || 'CarServiceTitisSistema';
 
 
 
 
 
 
-
-const JWT_SECRET = 'secreto_super_seguro'; // Usar variables de entorno en producción
 
 // Rutas
 const clienteRoutes = require('./routes/clientes');
@@ -45,7 +44,7 @@ const historialProductosRouter = require('./routes/historialProductos');
         console.log('Conexión a la base de datos establecida.');
 
         // Sincronización de modelos (actualizar estructura)
-        await sequelize.sync({ alter: true }); 
+        await sequelize.sync(); 
         console.log('Modelos sincronizados correctamente.');
 
     } catch (error) {

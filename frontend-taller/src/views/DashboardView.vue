@@ -3,9 +3,12 @@
     <div class="w-full md:w-1/2 p-5">
       <TablaDashboard />
     </div>
-    <div class="w-full md:w-1/2 p-5 ">
+    <div class="w-full md:w-1/2 ">
       <MenuDashboard />  
     </div>
+    <div class="w-full md:w-1/2 p-5">
+      <TablaInfoProductos />
+    </div>  
   </div>
 </template>
 
@@ -14,11 +17,13 @@ import { onMounted } from 'vue';
 import { renderChart } from '../utils/Chart'; // Asegúrate de la ruta correcta
 import TablaDashboard from '../components/TablaDashboard.vue'; // Asegúrate de la ruta correcta
 import MenuDashboard from '@/components/MenuDashboard.vue';
+import TablaInfoProductos from '@/components/TablaInfoProductos.vue';
 
 export default {
   components: {
     TablaDashboard,
     MenuDashboard,
+    TablaInfoProductos,
   },
   setup() {
     onMounted(() => {

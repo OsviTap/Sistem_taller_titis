@@ -14,7 +14,7 @@
             </svg>
           </button>
           <a href="#" class="flex ms-2 md:me-24">
-            <img src="https://flowbite.com/docs/images/logo.svg" class="h-8 me-3" alt="FlowBite Logo" />
+            <img src="../../public/assets/images/logo.png" class="h-11 me-3" alt="Logo" />
             <span class="self-center text-xl font-semibold sm:text-2xl whitespace-nowrap dark:text-white">Car Service
               Titis</span>
           </a>
@@ -29,7 +29,6 @@
                 d="M9 3c0-.55228.44772-1 1-1h8c.5523 0 1 .44772 1 1v3c0 .55228-.4477 1-1 1h-2v1h2c.5096 0 .9376.38314.9939.88957L19.8951 17H4.10498l.90116-8.11043C5.06241 8.38314 5.49047 8 6.00002 8H12V7h-2c-.55228 0-1-.44772-1-1V3Zm1.01 8H8.00002v2.01H10.01V11Zm.99 0h2.01v2.01H11V11Zm5.01 0H14v2.01h2.01V11Zm-8.00998 3H10.01v2.01H8.00002V14ZM13.01 14H11v2.01h2.01V14Zm.99 0h2.01v2.01H14V14ZM11 4h6v1h-6V4Z"
                 clip-rule="evenodd" />
             </svg>
-
           </button>
           <button @click="toggleTheme" type="button"
             class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5">
@@ -52,8 +51,10 @@
                 class="flex text-sm bg-gray-800 rounded-full focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
                 aria-expanded="false" data-dropdown-toggle="dropdown-user">
                 <span class="sr-only">Open user menu</span>
-                <img class="w-8 h-8 rounded-full" src="https://flowbite.com/docs/images/people/profile-picture-5.jpg"
-                  alt="user photo" />
+                <!-- Círculo con iniciales -->
+                <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
+                  {{ userInitials }}
+                </div>
               </button>
             </div>
             <!-- User dropdown -->
@@ -61,26 +62,21 @@
               class="z-50 hidden my-4 text-base list-none bg-white divide-y divide-gray-100 rounded shadow dark:bg-gray-700 dark:divide-gray-600"
               id="dropdown-user">
               <div class="px-4 py-3">
-                <p class="text-sm text-gray-900 dark:text-white">Neil Sims</p>
-                <p class="text-sm font-medium text-gray-900 truncate dark:text-gray-300">neil.sims@flowbite.com</p>
+                <p class="text-sm text-gray-900 dark:text-white">{{ userData.nombre }}</p>
+                <p class="text-sm font-medium text-gray-900 truncate dark:text-gray-300">{{ userData.email }}</p>
               </div>
               <ul class="py-1">
                 <li>
-                  <a href="#"
-                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-white">Dashboard</a>
+                  <router-link to="/usuarios"
+                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-white">
+                    Ajustes
+                  </router-link>
                 </li>
                 <li>
-                  <a href="#"
-                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-white">Settings</a>
-                </li>
-                <li>
-                  <a href="#"
-                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-white">Earnings</a>
-                </li>
-                <li>
-                  <a href="#"
-                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-white">Sign
-                    out</a>
+                  <a href="#" @click="logout"
+                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-white">
+                    Cerrar sesión
+                  </a>
                 </li>
               </ul>
             </div>
@@ -92,39 +88,86 @@
 </template>
 
 <script>
+import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+
 export default {
   name: "Navbar",
   emits: ["toggle-sidebar"],
-  data() {
-    return {
-      isDark: false
-    }
-  },
-  created() {
-    // Inicializar el tema al cargar el componente
-    this.isDark = 
-      localStorage.getItem('color-theme') === 'dark' || 
-      (!localStorage.getItem('color-theme') && 
-       window.matchMedia('(prefers-color-scheme: dark)').matches);
-    
-    // Aplicar el tema inicial
-    this.applyTheme();
-  },
-  methods: {
-    toggleTheme() {
-      this.isDark = !this.isDark;
-      this.applyTheme();
-    },
-    applyTheme() {
-      // Actualizar la clase en el documento
-      if (this.isDark) {
+  setup() {
+    const router = useRouter();
+    const isDark = ref(false);
+    const userData = ref({
+      nombre: '',
+      email: ''
+    });
+
+    const userInitials = computed(() => {
+      if (!userData.value.nombre) return '';
+      const names = userData.value.nombre.split(' ');
+      return names.length > 1 
+        ? (names[0][0] + names[1][0]).toUpperCase()
+        : names[0].substring(0, 2).toUpperCase();
+    });
+
+    const logout = () => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      router.push('/login');
+    };
+
+    const loadUserData = () => {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        userData.value = user;
+      }
+    };
+
+    onMounted(() => {
+      // Cargar datos del usuario
+      loadUserData();
+      
+      function applyTheme() {
+  if (isDark.value) {
+    document.body.style.backgroundColor = 'var(--color-background-dark)'; // Cambiar a fondo oscuro
+  } else {
+    document.body.style.backgroundColor = 'var(--color-background)'; // Cambiar a fondo claro
+  }
+}
+
+      // Inicializar el tema
+      isDark.value = 
+        localStorage.getItem('color-theme') === 'dark' || 
+        (!localStorage.getItem('color-theme') && 
+         window.matchMedia('(prefers-color-scheme: dark)').matches);
+      
+      // Aplicar el tema inicial
+      applyTheme();
+    });
+
+    const toggleTheme = () => {
+      isDark.value = !isDark.value;
+      applyTheme();
+    };
+
+    const applyTheme = () => {
+      if (isDark.value) {
         document.documentElement.classList.add('dark');
         localStorage.setItem('color-theme', 'dark');
       } else {
         document.documentElement.classList.remove('dark');
         localStorage.setItem('color-theme', 'light');
       }
-    }
+    };
+
+    return {
+      isDark,
+      userData,
+      userInitials,
+      toggleTheme,
+      logout
+    };
   }
 };
 </script>

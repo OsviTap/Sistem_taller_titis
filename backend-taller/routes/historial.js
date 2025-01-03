@@ -163,6 +163,7 @@ router.get('/', async (req, res) => {
         res.status(500).json({ error: 'Error al obtener historial', details: err.message });
     }
 });
+
 // Obtener historial detallado
 // router.get('/', async (req, res) => {
 //     try {

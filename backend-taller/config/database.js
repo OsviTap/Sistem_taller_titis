@@ -1,4 +1,5 @@
 const { Sequelize } = require('sequelize');
+require('dotenv').config();
 
 const sequelize = new Sequelize(
     process.env.DB_NAME,
@@ -13,11 +14,23 @@ const sequelize = new Sequelize(
             dateStrings: true, // Devolver fechas como strings
             typeCast: true, // Forzar las fechas en la zona horaria configurada
         },
-        
+        logging: console.log // Para ver las consultas SQL en la consola
     }
-    
-    
 );
+
+// Función para probar la conexión
+const testConnection = async () => {
+    try {
+        await sequelize.authenticate();
+        console.log('Conexión a la base de datos establecida correctamente.');
+    } catch (error) {
+        console.error('No se pudo conectar a la base de datos:', error);
+    }
+};
+
+// Ejecutar prueba de conexión
+testConnection();
+
 
 module.exports = sequelize;
 // const { Sequelize } = require('sequelize');

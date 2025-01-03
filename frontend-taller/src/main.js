@@ -7,6 +7,7 @@ import router from './router'
 import 'flowbite'
 import 'apexcharts'
 
+
 const app = createApp(App)
 
 // Configuración de devtools para Vue 3

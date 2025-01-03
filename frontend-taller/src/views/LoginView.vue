@@ -29,33 +29,32 @@
     </div>
 </template>
   
-  <script>
-  // import api from '@/api/axios';
-  
-  
-  export default {
-    name: 'Login',
-    data() {
-      return {
-        email: '',
-        password: '',
-        error: null,
-      };
-    },}
-  //   methods: {
-  //     async login() {
-  //       try {
-  //         const response = await api.post('/login', {
-  //           email: this.email,
-  //           password: this.password,
-  //         });
-  //         localStorage.setItem('token', response.data.token);
-  //         this.$router.push('/dashboard');
-  //       } catch (error) {
-  //         this.error = 'Credenciales incorrectas';
-  //       }
-  //     },
-  //   },
-  // };
-  </script>
+<script setup>
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import axios from '@/api/axios';
+
+const router = useRouter();
+const email = ref('');
+const password = ref('');
+const error = ref('');
+
+const login = async () => {
+  try {
+    const response = await axios.post('/usuarios/login', {
+      email: email.value,
+      password: password.value
+    });
+
+    const { token, usuario } = response.data;
+    
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(usuario));
+    
+    router.push('/dashboard');
+  } catch (err) {
+    error.value = 'Credenciales inválidas';
+  }
+};
+</script>
   

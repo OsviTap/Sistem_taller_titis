@@ -1,14 +1,25 @@
 <template>
-  <div class="flex flex-col md:flex-row">
-    <div class="w-full md:w-1/2 p-5">
-      <TablaDashboard />
+  <div class="container mx-auto p-4">
+    <div class="grid grid-cols-1 xl:grid-cols-4 gap-4">
+      <!-- Main content area -->
+      <div class="xl:col-span-3">
+        <div class="grid grid-rows-[3fr,1fr] gap-4 h-[calc(100vh-2rem)]">
+          <!-- Table section -->
+          <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
+            <TablaDashboard />
+          </div>
+          <!-- Menu Dashboard (donut chart) -->
+          <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
+            <MenuDashboard />
+          </div>
+        </div>
+      </div>
+      
+      <!-- Right sidebar -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 h-[calc(100vh-2rem)]">
+        <TablaInfoProductos />
+      </div>
     </div>
-    <div class="w-full md:w-1/2 ">
-      <MenuDashboard />  
-    </div>
-    <div class="w-full md:w-1/2 p-5">
-      <TablaInfoProductos />
-    </div>  
   </div>
 </template>
 

@@ -55,7 +55,10 @@ const historialProductosRouter = require('./routes/historialProductos');
 
 
 
-app.use(cors());
+app.use(cors({
+    origin: ["https://v0-car-service-tits-dorkxagpbgt.vercel.app", "http://localhost:5173"],
+    credentials: true
+  }));
 app.use(bodyParser.json());
 
 app.use(logger('dev'));
@@ -105,5 +108,10 @@ app.setIO = function(socketIO) {
     io = socketIO;
     app.set('io', io);
 };
+// Añade esto para usar socket en tus rutas
+app.use((req, res, next) => {
+    req.io = io;
+    next();
+});
 
 module.exports = app;

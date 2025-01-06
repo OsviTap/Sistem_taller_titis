@@ -18,8 +18,9 @@ export default defineConfig({
   server: {
     proxy: {
         '/socket.io': {
-            target: 'http://localhost:3000',
-            ws: true
+            target: process.env.VITE_BACKEND_URL || 'http://localhost:3001',
+            ws: true,
+            changeOrigin: true
         }
     }
   },

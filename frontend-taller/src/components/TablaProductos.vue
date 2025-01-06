@@ -183,7 +183,14 @@ const showDeleteModal = ref(false);
 const modalMode = ref('create');
 const selectedProduct = ref(null);
 const dataTable = ref(null);
-const socket = io('http://localhost:3001');
+const socket = io(import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001', {
+  transports: ['websocket'],
+  reconnection: true,
+  reconnectionDelay: 1000,
+  reconnectionAttempts: 10,
+  timeout: 5000,
+  autoConnect: true,
+});
 
 const formData = ref({
   nombre: '',

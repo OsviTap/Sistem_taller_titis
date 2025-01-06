@@ -7,30 +7,61 @@ const sequelize = new Sequelize(
     process.env.DB_PASSWORD,
     {
         host: process.env.DB_HOST,
+        port: process.env.DB_PORT, // Añadido el puerto
         dialect: 'mysql',
         timezone: '-04:00', // Zona horaria Bolivia (GMT-4)
         dialectOptions: {
             useUTC: false, // No usar UTC para guardar fechas
             dateStrings: true, // Devolver fechas como strings
             typeCast: true, // Forzar las fechas en la zona horaria configurada
+            ssl: {
+                require: true,
+                rejectUnauthorized: false
+            },
+            connectTimeout: 60000 // Aumentar timeout de conexión
+        },
+        pool: {
+            max: 5,
+            min: 0,
+            acquire: 30000,
+            idle: 10000
+        },
+        retry: {
+            max: 3 // Número máximo de intentos de reconexión
         },
         logging: console.log // Para ver las consultas SQL en la consola
     }
 );
 
-// Función para probar la conexión
+// Función mejorada para probar la conexión
 const testConnection = async () => {
     try {
         await sequelize.authenticate();
         console.log('Conexión a la base de datos establecida correctamente.');
+        
+        // Imprimir información de depuración
+        console.log('Configuración de conexión:', {
+            host: process.env.DB_HOST,
+            port: process.env.DB_PORT,
+            database: process.env.DB_NAME,
+            user: process.env.DB_USER
+        });
+        
     } catch (error) {
         console.error('No se pudo conectar a la base de datos:', error);
+        
+        // Información adicional de depuración
+        console.error('Detalles del error:', {
+            name: error.name,
+            message: error.message,
+            code: error.original?.code,
+            errno: error.original?.errno
+        });
     }
 };
 
 // Ejecutar prueba de conexión
 testConnection();
-
 
 module.exports = sequelize;
 // const { Sequelize } = require('sequelize');

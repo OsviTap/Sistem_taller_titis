@@ -30,7 +30,7 @@ const HistorialVisita = sequelize.define('HistorialVisita', {
         type: DataTypes.INTEGER,
         allowNull: false,  // Si quieres que sea obligatorio
         references: {
-            model: 'Visitas',  // Asegúrate que este es el nombre correcto de tu tabla
+            model: 'visitas',  // Asegúrate que este es el nombre correcto de tu tabla
             key: 'id'
         }
     }

@@ -35,7 +35,7 @@ const ProductHistory = sequelize.define('ProductHistory', {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
-            model: 'Productos',
+            model: 'productos',
             key: 'id'
         }
     },
@@ -43,7 +43,7 @@ const ProductHistory = sequelize.define('ProductHistory', {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
-            model: 'Clientes',
+            model: 'clientes',
             key: 'id'
         }
     },
@@ -51,7 +51,7 @@ const ProductHistory = sequelize.define('ProductHistory', {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
-            model: 'Vehiculos',
+            model: 'vehiculos',
             key: 'id'
         }
     },
@@ -59,7 +59,7 @@ const ProductHistory = sequelize.define('ProductHistory', {
         type: DataTypes.INTEGER,
         allowNull: true,
         references: {
-            model: 'Visitas',
+            model: 'visitas',
             key: 'id'
         }
     }

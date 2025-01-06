@@ -35,7 +35,7 @@ const ProductHistory = sequelize.define('ProductHistory', {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
-            model: 'productos',
+            model: 'Productos',
             key: 'id'
         }
     },

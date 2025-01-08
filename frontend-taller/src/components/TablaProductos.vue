@@ -221,9 +221,7 @@ const cargarProductos = async () => {
 const formatDate = (date) => {
   if (!date) return '';
   const fechaUTC = new Date(date);
-  // Ajustar la fecha a la zona horaria local sin cambiar el día
-  const fechaLocal = new Date(fechaUTC.getTime() + fechaUTC.getTimezoneOffset() * 60000);
-  return fechaLocal.toLocaleDateString('es-ES', {
+  return fechaUTC.toLocaleDateString('es-ES', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit'
@@ -305,28 +303,25 @@ const openCreateModal = () => {
 
 const openEditModal = (producto) => {
   modalMode.value = 'edit';
-  selectedProduct.value = producto;
-  formData.value = {
-    ...producto,
-    fechaAdquisicion: formatDateForInput(producto.fechaAdquisicion)
-  };
+  formData.value = { ...producto };
   showFormModal.value = true;
 };
 
 const openViewModal = (producto) => {
   modalMode.value = 'view';
-  selectedProduct.value = producto;
-  formData.value = {
-    ...producto,
-    fechaAdquisicion: formatDateForInput(producto.fechaAdquisicion)
-  };
+  formData.value = { ...producto };
   showFormModal.value = true;
 };
 
 const closeModal = () => {
   showFormModal.value = false;
-  resetFormData();
-  selectedProduct.value = null;
+  formData.value = {
+    nombre: '',
+    stock: 0,
+    precioCosto: 0,
+    precioVenta: 0,
+    fechaAdquisicion: ''
+  };
 };
 
 const submitForm = async () => {

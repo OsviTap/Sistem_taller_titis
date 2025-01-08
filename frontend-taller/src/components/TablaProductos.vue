@@ -317,9 +317,10 @@ const fetchProductos = async () => {
 
 const openViewModal = (producto) => {
   modalMode.value = 'view';
+  const fechaFormateada = producto.fechaAdquisicion ? new Date(producto.fechaAdquisicion).toISOString().split('T')[0] : '';
   formData.value = {
     ...producto,
-    fechaAdquisicion: producto.fechaAdquisicion ? producto.fechaAdquisicion.split('T')[0] : ''
+    fechaAdquisicion: fechaFormateada
   };
   showFormModal.value = true;
 };
@@ -327,9 +328,10 @@ const openViewModal = (producto) => {
 const openEditModal = (producto) => {
   modalMode.value = 'edit';
   selectedProduct.value = producto;
+  const fechaFormateada = producto.fechaAdquisicion ? new Date(producto.fechaAdquisicion).toISOString().split('T')[0] : '';
   formData.value = {
     ...producto,
-    fechaAdquisicion: producto.fechaAdquisicion ? producto.fechaAdquisicion.split('T')[0] : ''
+    fechaAdquisicion: fechaFormateada
   };
   showFormModal.value = true;
 };
@@ -348,11 +350,16 @@ const closeModal = () => {
 
 const submitForm = async () => {
   try {
+    const dataToSend = {
+      ...formData.value,
+      fechaAdquisicion: formData.value.fechaAdquisicion ? new Date(formData.value.fechaAdquisicion).toISOString() : null
+    };
+
     if (modalMode.value === 'create') {
-      await axios.post('/productos', formData.value);
+      await axios.post('/productos', dataToSend);
       alert('Producto creado exitosamente');
     } else if (modalMode.value === 'edit') {
-      await axios.put(`/productos/${selectedProduct.value.id}`, formData.value);
+      await axios.put(`/productos/${selectedProduct.value.id}`, dataToSend);
       alert('Producto actualizado exitosamente');
     }
     showFormModal.value = false;

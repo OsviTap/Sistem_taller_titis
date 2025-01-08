@@ -213,7 +213,10 @@ const cargarProductos = async () => {
 // Función de formateo de fecha
 const formatDate = (date) => {
   if (!date) return '';
-  return new Date(date).toLocaleDateString('es-ES', {
+  const fechaUTC = new Date(date);
+  // Ajustar la fecha a la zona horaria local sin cambiar el día
+  const fechaLocal = new Date(fechaUTC.getTime() + fechaUTC.getTimezoneOffset() * 60000);
+  return fechaLocal.toLocaleDateString('es-ES', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit'

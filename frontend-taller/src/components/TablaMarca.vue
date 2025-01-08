@@ -28,20 +28,41 @@
       </tbody>
     </table>
       <!-- Modal para agregar/editar marca -->
-      <div v-if="showModal" class="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50">
-        <div class="bg-white p-6 rounded-lg shadow-lg w-96">
-          <h3 class="text-lg font-semibold mb-4">{{ isEditing ? 'Editar Marca' : 'Agregar Marca' }}</h3>
-          <input v-model="form.nombre" type="text" placeholder="Nombre" class="w-full mb-4 p-2 border rounded-lg">
-          <div class="flex justify-end space-x-2">
-            <button @click="saveMarca" class="px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-lg">
-              Guardar
-            </button>
-            <button @click="closeModal" class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg">
-              Cancelar
-            </button>
-          </div>
+      <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-50">
+      <div class="bg-white p-6 rounded-lg shadow-lg w-96">
+        <h3 class="text-lg font-semibold mb-4">{{ isEditing ? 'Editar Marca' : 'Agregar Marca' }}</h3>
+        
+        <!-- Agregar mensaje de error -->
+        <div v-if="errorMessage" class="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
+          {{ errorMessage }}
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Nombre de la Marca</label>
+          <input 
+            v-model="form.nombre" 
+            type="text" 
+            placeholder="Ingrese el nombre de la marca" 
+            class="w-full p-2 border rounded-lg"
+          >
+        </div>
+
+        <div class="flex justify-end space-x-2">
+          <button 
+            @click="saveMarca" 
+            class="px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-lg"
+          >
+            {{ isEditing ? 'Actualizar' : 'Guardar' }}
+          </button>
+          <button 
+            @click="closeModal" 
+            class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg"
+          >
+            Cancelar
+          </button>
         </div>
       </div>
+    </div>
   </div>
 </template>
 
@@ -53,9 +74,13 @@ import { DataTable } from 'simple-datatables';
 const marcas = ref([]);
 const showModal = ref(false);
 const isEditing = ref(false);
-const form = ref({ id: null, nombre: '' });
+const errorMessage = ref('');
+const form = ref({ 
+  id: null, 
+  nombre: '' 
+});
 
-
+//Funcion para obtener las marcas
 const fetchMarcas = async () => {
   const response = await axios.get('/marcas');
   marcas.value = response.data;
@@ -74,11 +99,14 @@ const openEditModal = (marca) => {
   }
   form.value = { ...marca };
   isEditing.value = true;
+  errorMessage.value = '';
   showModal.value = true;
 };
 
 const closeModal = () => {
   showModal.value = false;
+  form.value = { id: null, nombre: '' };
+  errorMessage.value = '';
 };
 
 const saveMarca = async () => {
@@ -104,7 +132,7 @@ const deleteMarca = async (id) => {
     await fetchMarcas();
   } catch (error) {
     console.error('Error al eliminar marca:', error);
-    alert('Error al eliminar la marca');
+    errorMessage.value = 'Error al eliminar la marca';
   }
 };
 onMounted(async () => {

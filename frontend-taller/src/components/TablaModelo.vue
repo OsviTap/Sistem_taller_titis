@@ -3,12 +3,6 @@
     <!-- Barra de búsqueda y ordenamiento -->
     <div class="p-4 bg-white dark:bg-gray-800">
       <div class="flex items-center justify-between">
-        <input
-          v-model="searchTerm"
-          type="text"
-          class="p-2 border rounded-lg"
-          placeholder="Buscar por nombre..."
-        >
         <button
           @click="toggleOrden"
           class="px-4 py-2 bg-gray-200 rounded-lg"
@@ -114,8 +108,7 @@ const modelos = ref([]);
 const marcas = ref([]);
 const showModal = ref(false);
 const isEditing = ref(false);
-const errorMessage = ref('');  // Definido correctamente como ref
-
+const errorMessage = ref('');
 const form = ref({ 
   id: null, 
   marcaId: '', 
@@ -163,6 +156,7 @@ const openEditModal = (modelo) => {
     nombre: modelo.nombre
   };
   isEditing.value = true;
+  errorMessage.value = '';
   showModal.value = true;
 };
 

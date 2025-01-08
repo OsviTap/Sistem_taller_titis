@@ -1,5 +1,24 @@
 <template>
   <div class="relative overflow-x-auto shadow-md sm:rounded-lg m-4">
+    <!-- Barra de búsqueda y ordenamiento -->
+    <div class="p-4 bg-white dark:bg-gray-800">
+      <div class="flex items-center justify-between">
+        <input
+          v-model="searchTerm"
+          type="text"
+          class="p-2 border rounded-lg"
+          placeholder="Buscar por nombre..."
+        >
+        <button
+          @click="toggleOrden"
+          class="px-4 py-2 bg-gray-200 rounded-lg"
+        >
+          Ordenar {{ sortOrder === 'asc' ? '↑' : '↓' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Tabla existente pero usando modelosPaginados -->
     <table id="filter-table" class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
       <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
         <tr>
@@ -10,16 +29,22 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="modelo in modelos" :key="modelo.id" class="bg-white border-b hover:bg-gray-50">
+        <tr v-for="modelo in modelosPaginados" :key="modelo.id" class="bg-white border-b hover:bg-gray-50">
           <td class="px-6 py-4">{{ modelo.id }}</td>
-          <td class="px-6 py-4">{{ modelo.marca?.nombre || modelo.marcaId }}</td>
+          <td class="px-6 py-4">{{ obtenerNombreMarca(modelo.marcaId) }}</td>
           <td class="px-6 py-4">{{ modelo.nombre }}</td>
           <td class="px-6 py-4">
             <div class="flex items-center space-x-2">
-              <button @click="openEditModal(modelo)" class="font-medium text-yellow-600 dark:text-yellow-500 hover:underline">
+              <button 
+                @click="editarModelo(modelo)" 
+                class="font-medium text-yellow-600 dark:text-yellow-500 hover:underline"
+              >
                 Editar
               </button>
-              <button @click="deleteModelo(modelo.id)" class="font-medium text-red-600 dark:text-red-500 hover:underline">
+              <button 
+                @click="confirmarEliminar(modelo.id)" 
+                class="font-medium text-red-600 dark:text-red-500 hover:underline"
+              >
                 Eliminar
               </button>
             </div>
@@ -27,6 +52,28 @@
         </tr>
       </tbody>
     </table>
+
+    <!-- Controles de paginación -->
+    <div class="flex items-center justify-between p-4 bg-white dark:bg-gray-800">
+      <div class="flex items-center space-x-2">
+        <button
+          v-for="pagina in totalPaginas"
+          :key="pagina"
+          @click="cambiarPagina(pagina)"
+          :class="[
+            'px-3 py-1 rounded-lg',
+            currentPage === pagina 
+              ? 'bg-blue-600 text-white' 
+              : 'bg-gray-200 text-gray-700'
+          ]"
+        >
+          {{ pagina }}
+        </button>
+      </div>
+      <div class="text-sm text-gray-700">
+        Mostrando {{ itemsPerPage }} elementos por página
+      </div>
+    </div>
 
     <div v-if="showModal" class="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50">
       <div class="bg-white p-6 rounded-lg shadow-lg w-96">
@@ -87,7 +134,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import axios from '@/api/axios';
 
 const modelos = ref([]);
@@ -101,6 +148,11 @@ const form = ref({
   marcaId: '', 
   nombre: '' 
 });
+
+const sortOrder = ref('asc');
+const currentPage = ref(1);
+const itemsPerPage = ref(5);
+const searchTerm = ref('');
 
 const fetchModelos = async () => {
   try {
@@ -182,6 +234,74 @@ const saveModelo = async () => {
 };
 
 const deleteModelo = async (id) => {
+  if (confirm('¿Estás seguro de que deseas eliminar este modelo?')) {
+    try {
+      await axios.delete(`/modelos/${id}`);
+      await fetchModelos();
+    } catch (error) {
+      console.error('Error al eliminar modelo:', error);
+      errorMessage.value = 'Error al eliminar el modelo';
+    }
+  }
+};
+
+const obtenerNombreMarca = (marcaId) => {
+  const marca = marcas.value.find(m => m.id === marcaId);
+  return marca ? marca.nombre : 'N/A';
+};
+
+const modelosFiltrados = computed(() => {
+  let resultado = [...modelos.value];
+  
+  // Filtrar por término de búsqueda
+  if (searchTerm.value) {
+    resultado = resultado.filter(modelo => 
+      modelo.nombre.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
+      obtenerNombreMarca(modelo.marcaId).toLowerCase().includes(searchTerm.value.toLowerCase())
+    );
+  }
+  
+  // Ordenar
+  resultado.sort((a, b) => {
+    const nombreA = a.nombre.toLowerCase();
+    const nombreB = b.nombre.toLowerCase();
+    return sortOrder.value === 'asc' 
+      ? nombreA.localeCompare(nombreB)
+      : nombreB.localeCompare(nombreA);
+  });
+  
+  return resultado;
+});
+
+const modelosPaginados = computed(() => {
+  const inicio = (currentPage.value - 1) * itemsPerPage.value;
+  const fin = inicio + itemsPerPage.value;
+  return modelosFiltrados.value.slice(inicio, fin);
+});
+
+const totalPaginas = computed(() => 
+  Math.ceil(modelosFiltrados.value.length / itemsPerPage.value)
+);
+
+const cambiarPagina = (pagina) => {
+  currentPage.value = pagina;
+};
+
+const toggleOrden = () => {
+  sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+};
+
+const editarModelo = (modelo) => {
+  form.value = {
+    id: modelo.id,
+    marcaId: modelo.marcaId,
+    nombre: modelo.nombre
+  };
+  isEditing.value = true;
+  showModal.value = true;
+};
+
+const confirmarEliminar = async (id) => {
   if (confirm('¿Estás seguro de que deseas eliminar este modelo?')) {
     try {
       await axios.delete(`/modelos/${id}`);

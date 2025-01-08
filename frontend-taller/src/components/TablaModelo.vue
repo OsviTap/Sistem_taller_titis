@@ -17,9 +17,36 @@
     <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
       <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
         <tr>
-          <th scope="col" class="px-6 py-3">ID</th>
-          <th scope="col" class="px-6 py-3">Marca</th>
-          <th scope="col" class="px-6 py-3">Nombre</th>
+          <th 
+            scope="col" 
+            class="px-6 py-3 cursor-pointer hover:bg-gray-100"
+            @click="handleSort('id')"
+          >
+            ID
+            <span v-if="sortColumn === 'id'" class="ml-1">
+              {{ sortDirection === 'asc' ? '↑' : '↓' }}
+            </span>
+          </th>
+          <th 
+            scope="col" 
+            class="px-6 py-3 cursor-pointer hover:bg-gray-100"
+            @click="handleSort('marca')"
+          >
+            Marca
+            <span v-if="sortColumn === 'marca'" class="ml-1">
+              {{ sortDirection === 'asc' ? '↑' : '↓' }}
+            </span>
+          </th>
+          <th 
+            scope="col" 
+            class="px-6 py-3 cursor-pointer hover:bg-gray-100"
+            @click="handleSort('nombre')"
+          >
+            Nombre
+            <span v-if="sortColumn === 'nombre'" class="ml-1">
+              {{ sortDirection === 'asc' ? '↑' : '↓' }}
+            </span>
+          </th>
           <th scope="col" class="px-6 py-3">Acciones</th>
         </tr>
       </thead>
@@ -151,6 +178,10 @@ const itemsPerPage = ref(10);
 const searchTerm = ref('');
 const maxPageButtons = 5; // Número máximo de botones de página a mostrar
 
+// Agregar referencias para ordenamiento
+const sortColumn = ref('nombre');
+const sortDirection = ref('asc');
+
 const fetchModelos = async () => {
   try {
     const response = await axios.get('/modelos');
@@ -177,10 +208,36 @@ const obtenerNombreMarca = (marcaId) => {
 };
 
 const filteredModelos = computed(() => {
-  return modelos.value.filter(modelo => 
+  let resultado = modelos.value.filter(modelo => 
     modelo.nombre.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
     obtenerNombreMarca(modelo.marcaId).toLowerCase().includes(searchTerm.value.toLowerCase())
   );
+
+  // Ordenar resultados
+  resultado.sort((a, b) => {
+    let compareA, compareB;
+
+    if (sortColumn.value === 'marca') {
+      // Ordenar por nombre de marca
+      compareA = obtenerNombreMarca(a.marcaId).toLowerCase();
+      compareB = obtenerNombreMarca(b.marcaId).toLowerCase();
+    } else {
+      // Ordenar por otras columnas
+      compareA = a[sortColumn.value];
+      compareB = b[sortColumn.value];
+      
+      if (typeof compareA === 'string') {
+        compareA = compareA.toLowerCase();
+        compareB = compareB.toLowerCase();
+      }
+    }
+
+    if (compareA < compareB) return sortDirection.value === 'asc' ? -1 : 1;
+    if (compareA > compareB) return sortDirection.value === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  return resultado;
 });
 
 const paginatedModelos = computed(() => {
@@ -281,6 +338,15 @@ const changePage = (page) => {
 watch(searchTerm, () => {
   currentPage.value = 1; // Reset a la primera página cuando se realiza una búsqueda
 });
+
+const handleSort = (column) => {
+  if (sortColumn.value === column) {
+    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortColumn.value = column;
+    sortDirection.value = 'asc';
+  }
+};
 
 onMounted(async () => {
   await fetchMarcas();

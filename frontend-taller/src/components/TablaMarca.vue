@@ -17,8 +17,26 @@
     <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
       <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
         <tr>
-          <th scope="col" class="px-6 py-3">ID</th>
-          <th scope="col" class="px-6 py-3">Nombre</th>
+          <th 
+            scope="col" 
+            class="px-6 py-3 cursor-pointer hover:bg-gray-100"
+            @click="handleSort('id')"
+          >
+            ID
+            <span v-if="sortColumn === 'id'" class="ml-1">
+              {{ sortDirection === 'asc' ? '↑' : '↓' }}
+            </span>
+          </th>
+          <th 
+            scope="col" 
+            class="px-6 py-3 cursor-pointer hover:bg-gray-100"
+            @click="handleSort('nombre')"
+          >
+            Nombre
+            <span v-if="sortColumn === 'nombre'" class="ml-1">
+              {{ sortDirection === 'asc' ? '↑' : '↓' }}
+            </span>
+          </th>
           <th scope="col" class="px-6 py-3">Acciones</th>
         </tr>
       </thead>
@@ -126,6 +144,10 @@ const currentPage = ref(1);
 const itemsPerPage = ref(10);
 const searchTerm = ref('');
 
+// Agregar referencias para ordenamiento
+const sortColumn = ref('nombre'); // columna por defecto
+const sortDirection = ref('asc');
+
 const fetchMarcas = async () => {
   try {
     const response = await axios.get('/marcas');
@@ -137,9 +159,27 @@ const fetchMarcas = async () => {
 };
 
 const filteredMarcas = computed(() => {
-  return marcas.value.filter(marca => 
+  let resultado = marcas.value.filter(marca => 
     marca.nombre.toLowerCase().includes(searchTerm.value.toLowerCase())
   );
+
+  // Ordenar resultados
+  resultado.sort((a, b) => {
+    let compareA = a[sortColumn.value];
+    let compareB = b[sortColumn.value];
+
+    // Convertir a minúsculas si es string
+    if (typeof compareA === 'string') {
+      compareA = compareA.toLowerCase();
+      compareB = compareB.toLowerCase();
+    }
+
+    if (compareA < compareB) return sortDirection.value === 'asc' ? -1 : 1;
+    if (compareA > compareB) return sortDirection.value === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  return resultado;
 });
 
 const paginatedMarcas = computed(() => {
@@ -209,6 +249,18 @@ const deleteMarca = async (id) => {
 watch(searchTerm, () => {
   currentPage.value = 1;
 });
+
+// Función para manejar el ordenamiento
+const handleSort = (column) => {
+  if (sortColumn.value === column) {
+    // Si es la misma columna, cambiar dirección
+    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    // Si es diferente columna, establecer nueva columna y dirección asc
+    sortColumn.value = column;
+    sortDirection.value = 'asc';
+  }
+};
 
 onMounted(fetchMarcas);
 

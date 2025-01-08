@@ -16,10 +16,16 @@
           <td class="px-6 py-4">{{ marca.nombre }}</td>
           <td class="px-6 py-4">
             <div class="flex items-center space-x-2">
-              <button @click="openEditModal(marca)" class="font-medium text-yellow-600 dark:text-yellow-500 hover:underline">
+              <button 
+                @click="openEditModal(marca)" 
+                class="font-medium text-yellow-600 dark:text-yellow-500 hover:underline"
+              >
                 Editar
               </button>
-              <button @click="deleteMarca(marca.id)" class="font-medium text-red-600 dark:text-red-500 hover:underline">
+              <button 
+                @click="deleteMarca(marca.id)" 
+                class="font-medium text-red-600 dark:text-red-500 hover:underline"
+              >
                 Eliminar
               </button>
             </div>
@@ -97,7 +103,10 @@ const openEditModal = (marca) => {
     console.error('Marca inválida:', marca);
     return;
   }
-  form.value = { ...marca };
+  form.value = {
+    id: marca.id,
+    nombre: marca.nombre
+  };
   isEditing.value = true;
   errorMessage.value = '';
   showModal.value = true;
@@ -111,28 +120,47 @@ const closeModal = () => {
 
 const saveMarca = async () => {
   try {
-    if (isEditing.value) {
-      await axios.put(`/marcas/${form.value.id}`, form.value);
-    } else {
-      await axios.post('/marcas', form.value);
+    // Validaciones
+    if (!form.value.nombre) {
+      errorMessage.value = 'Por favor complete todos los campos';
+      return;
     }
+
+    const datos = {
+      nombre: form.value.nombre.trim()
+    };
+
+    console.log('Datos a enviar:', datos); // Debug
+
+    if (isEditing.value) {
+      const response = await axios.put(`/marcas/${form.value.id}`, datos);
+      console.log('Respuesta edición:', response.data);
+    } else {
+      const response = await axios.post('/marcas', datos);
+      console.log('Respuesta creación:', response.data);
+    }
+    
     await fetchMarcas();
     closeModal();
-  } catch (error) {
-    console.error('Error al guardar marca:', error);
+  } catch (err) {
+    console.error('Error al guardar marca:', err);
+    // Mostrar mensaje de error más específico
+    const errorMsg = err.response?.data?.error || 
+                    err.response?.data?.details || 
+                    'Error al guardar la marca';
+    errorMessage.value = Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg;
   }
 };
 
 const deleteMarca = async (id) => {
-  try {
-    if (!confirm('¿Estás seguro de que deseas eliminar esta marca?')) {
-      return;
+  if (confirm('¿Estás seguro de que deseas eliminar esta marca?')) {
+    try {
+      await axios.delete(`/marcas/${id}`);
+      await fetchMarcas();
+    } catch (error) {
+      console.error('Error al eliminar marca:', error);
+      errorMessage.value = 'Error al eliminar la marca';
     }
-    await axios.delete(`/marcas/${id}`);
-    await fetchMarcas();
-  } catch (error) {
-    console.error('Error al eliminar marca:', error);
-    errorMessage.value = 'Error al eliminar la marca';
   }
 };
 onMounted(async () => {

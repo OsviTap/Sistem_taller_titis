@@ -439,6 +439,19 @@ watch(itemsPerPage, () => {
   currentPage.value = 1;
 });
 
+// Agregar la función openCreateModal
+const openCreateModal = () => {
+  modalMode.value = 'create';
+  formData.value = {
+    nombre: '',
+    stock: 0,
+    precioCosto: 0,
+    precioVenta: 0,
+    fechaAdquisicion: ''
+  };
+  showFormModal.value = true;
+};
+
 onMounted(() => {
   fetchProductos();
   
@@ -449,7 +462,8 @@ onMounted(() => {
 
 defineExpose({
   openViewModal,
-  openEditModal
+  openEditModal,
+  openCreateModal
 });
 </script>
 

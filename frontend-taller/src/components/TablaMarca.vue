@@ -78,34 +78,43 @@ const closeModal = () => {
 };
 
 const saveMarca = async () => {
-  if (isEditing.value) {
-    await axios.put(`/marcas/${form.value.id}`, form.value);
-  } else {
-    await axios.post('/marcas', form.value);
-    window.location.reload();
+  try {
+    if (isEditing.value) {
+      await axios.put(`/marcas/${form.value.id}`, form.value);
+    } else {
+      await axios.post('/marcas', form.value);
+    }
+    await fetchMarcas();
+    closeModal();
+  } catch (error) {
+    console.error('Error al guardar marca:', error);
   }
-  closeModal();
-  fetchMarcas();
 };
 
 const deleteMarca = async (id) => {
   if (confirm('¿Estás seguro de que deseas eliminar esta marca?')) {
-    await axios.delete(`/marcas/${id}`);
-    fetchMarcas();
+    try {
+      await axios.delete(`/marcas/${id}`);
+      await fetchMarcas();
+    } catch (error) {
+      console.error('Error al eliminar marca:', error);
+    }
   }
 };
 
 onMounted(async () => {
   await fetchMarcas();
-
-  if (document.getElementById("filter-table")) {
-    const dataTable = new DataTable("#filter-table", {
-      labels: {
-        perPage: "marcas por página",
-        placeholder: "Buscar marca...",
-      },
-    });
-  }
+  
+  const dataTable = new DataTable("#filter-table", {
+    perPage: 10,
+    perPageSelect: [5, 10, 15, 20, 25],
+    labels: {
+      placeholder: "Buscar marca...",
+      perPage: "Registros por página",
+      noRows: "No hay registros para mostrar",
+      info: "Mostrando {start} a {end} de {rows} registros",
+    },
+  });
 });
 defineExpose({
   openCreateModal: openAddModal,

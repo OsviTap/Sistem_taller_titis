@@ -29,7 +29,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="modelo in modelosPaginados" :key="modelo.id" class="bg-white border-b hover:bg-gray-50">
+        <tr v-for="modelo in modelos" :key="modelo.id" class="bg-white border-b hover:bg-gray-50">
           <td class="px-6 py-4">{{ modelo.id }}</td>
           <td class="px-6 py-4">{{ obtenerNombreMarca(modelo.marcaId) }}</td>
           <td class="px-6 py-4">{{ modelo.nombre }}</td>
@@ -52,28 +52,6 @@
         </tr>
       </tbody>
     </table>
-
-    <!-- Controles de paginación -->
-    <div class="flex items-center justify-between p-4 bg-white dark:bg-gray-800">
-      <div class="flex items-center space-x-2">
-        <button
-          v-for="pagina in totalPaginas"
-          :key="pagina"
-          @click="cambiarPagina(pagina)"
-          :class="[
-            'px-3 py-1 rounded-lg',
-            currentPage === pagina 
-              ? 'bg-blue-600 text-white' 
-              : 'bg-gray-200 text-gray-700'
-          ]"
-        >
-          {{ pagina }}
-        </button>
-      </div>
-      <div class="text-sm text-gray-700">
-        Mostrando {{ itemsPerPage }} elementos por página
-      </div>
-    </div>
 
     <div v-if="showModal" class="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50">
       <div class="bg-white p-6 rounded-lg shadow-lg w-96">
@@ -136,6 +114,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import axios from '@/api/axios';
+import { DataTable } from 'simple-datatables';
 
 const modelos = ref([]);
 const marcas = ref([]);
@@ -150,8 +129,6 @@ const form = ref({
 });
 
 const sortOrder = ref('asc');
-const currentPage = ref(1);
-const itemsPerPage = ref(5);
 const searchTerm = ref('');
 
 const fetchModelos = async () => {
@@ -273,24 +250,6 @@ const modelosFiltrados = computed(() => {
   return resultado;
 });
 
-const modelosPaginados = computed(() => {
-  const inicio = (currentPage.value - 1) * itemsPerPage.value;
-  const fin = inicio + itemsPerPage.value;
-  return modelosFiltrados.value.slice(inicio, fin);
-});
-
-const totalPaginas = computed(() => 
-  Math.ceil(modelosFiltrados.value.length / itemsPerPage.value)
-);
-
-const cambiarPagina = (pagina) => {
-  currentPage.value = pagina;
-};
-
-const toggleOrden = () => {
-  sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
-};
-
 const editarModelo = (modelo) => {
   form.value = {
     id: modelo.id,
@@ -313,9 +272,24 @@ const confirmarEliminar = async (id) => {
   }
 };
 
+const toggleOrden = () => {
+  sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+};
+
 onMounted(async () => {
   await fetchMarcas();
   await fetchModelos();
+  
+  const dataTable = new DataTable("#filter-table", {
+    perPage: 10,
+    perPageSelect: [5, 10, 15, 20, 25],
+    labels: {
+      placeholder: "Buscar modelo...",
+      perPage: "Registros por página",
+      noRows: "No hay registros para mostrar",
+      info: "Mostrando {start} a {end} de {rows} registros",
+    },
+  });
 });
 
 defineExpose({

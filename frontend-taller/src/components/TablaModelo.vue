@@ -131,7 +131,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import axios from '@/api/axios';
 
 const modelos = ref([]);
@@ -276,6 +276,11 @@ const changePage = (page) => {
     currentPage.value = page;
   }
 };
+
+// Agregar un watcher para searchTerm
+watch(searchTerm, () => {
+  currentPage.value = 1; // Reset a la primera página cuando se realiza una búsqueda
+});
 
 onMounted(async () => {
   await fetchMarcas();

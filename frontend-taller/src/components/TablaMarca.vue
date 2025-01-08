@@ -109,7 +109,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import axios from '@/api/axios';
 
 const marcas = ref([]);
@@ -204,6 +204,11 @@ const deleteMarca = async (id) => {
     }
   }
 };
+
+// Agregar un watcher para searchTerm
+watch(searchTerm, () => {
+  currentPage.value = 1;
+});
 
 onMounted(fetchMarcas);
 

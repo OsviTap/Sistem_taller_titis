@@ -1,5 +1,39 @@
 <template>
   <div>
+    <!-- Agregar barra de búsqueda y selector de items por página -->
+    <div class="flex flex-col md:flex-row items-center justify-between space-y-3 md:space-y-0 md:space-x-4 p-4">
+      <!-- Búsqueda -->
+      <div class="w-full md:w-1/2">
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+            <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
+            </svg>
+          </div>
+          <input
+            type="text"
+            v-model="searchTerm"
+            class="block p-2 pl-10 text-sm text-gray-900 border border-gray-300 rounded-lg w-full bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+            placeholder="Buscar producto..."
+          >
+        </div>
+      </div>
+      <!-- Selector de ítems por página -->
+      <div class="w-full md:w-auto flex flex-col md:flex-row space-y-2 md:space-y-0 items-stretch md:items-center justify-end md:space-x-3 flex-shrink-0">
+        <div class="flex items-center space-x-3 w-full md:w-auto">
+          <select
+            v-model="itemsPerPage"
+            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          >
+            <option value="5">5</option>
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
     <!-- Tabla existente -->
     <div class="relative overflow-x-auto shadow-md sm:rounded-lg m-4">
       <div v-if="productos.length > 0" >
@@ -16,7 +50,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="producto in productos" :key="producto.id" class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+          <tr v-for="producto in paginatedProductos" :key="producto.id" class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
             
             <td class="px-6 py-4">{{ producto.nombre }}</td>
             <td class="px-6 py-4">{{ producto.stock }}</td>
@@ -175,11 +209,61 @@
         </div>
       </div>
     </div>
+
+    <!-- Agregar paginación al final de la tabla -->
+    <nav class="flex flex-col md:flex-row justify-between items-center space-y-3 md:space-y-0 p-4">
+      <span class="text-sm font-normal text-gray-500 dark:text-gray-400">
+        Mostrando 
+        <span class="font-semibold text-gray-900 dark:text-white">{{ startIndex + 1 }}-{{ Math.min(endIndex, filteredProductos.length) }}</span>
+        de
+        <span class="font-semibold text-gray-900 dark:text-white">{{ filteredProductos.length }}</span>
+      </span>
+      <ul class="inline-flex items-stretch -space-x-px">
+        <li>
+          <button
+            @click="previousPage"
+            :disabled="currentPage === 1"
+            class="flex items-center justify-center h-full py-1.5 px-3 ml-0 text-gray-500 bg-white rounded-l-lg border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+            :class="{ 'opacity-50 cursor-not-allowed': currentPage === 1 }"
+          >
+            <span class="sr-only">Anterior</span>
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/>
+            </svg>
+          </button>
+        </li>
+        <li v-for="page in totalPages" :key="page">
+          <button
+            @click="goToPage(page)"
+            class="flex items-center justify-center text-sm py-2 px-3 leading-tight"
+            :class="{
+              'text-blue-600 bg-blue-50 border border-blue-300 hover:bg-blue-100 hover:text-blue-700 dark:border-gray-700 dark:bg-gray-700 dark:text-white': page === currentPage,
+              'text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white': page !== currentPage
+            }"
+          >
+            {{ page }}
+          </button>
+        </li>
+        <li>
+          <button
+            @click="nextPage"
+            :disabled="currentPage === totalPages"
+            class="flex items-center justify-center h-full py-1.5 px-3 leading-tight text-gray-500 bg-white rounded-r-lg border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+            :class="{ 'opacity-50 cursor-not-allowed': currentPage === totalPages }"
+          >
+            <span class="sr-only">Siguiente</span>
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+            </svg>
+          </button>
+        </li>
+      </ul>
+    </nav>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import axios from '@/api/axios';
 import { io } from 'socket.io-client';
 
@@ -196,6 +280,9 @@ const formData = ref({
   precioVenta: 0,
   fechaAdquisicion: ''
 });
+const searchTerm = ref('');
+const currentPage = ref(1);
+const itemsPerPage = ref(5);
 
 // Socket.io setup
 const socket = io(import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001', {
@@ -230,14 +317,20 @@ const fetchProductos = async () => {
 
 const openViewModal = (producto) => {
   modalMode.value = 'view';
-  formData.value = { ...producto };
+  formData.value = {
+    ...producto,
+    fechaAdquisicion: producto.fechaAdquisicion ? producto.fechaAdquisicion.split('T')[0] : ''
+  };
   showFormModal.value = true;
 };
 
 const openEditModal = (producto) => {
   modalMode.value = 'edit';
   selectedProduct.value = producto;
-  formData.value = { ...producto };
+  formData.value = {
+    ...producto,
+    fechaAdquisicion: producto.fechaAdquisicion ? producto.fechaAdquisicion.split('T')[0] : ''
+  };
   showFormModal.value = true;
 };
 
@@ -287,6 +380,57 @@ const deleteProducto = async () => {
     alert('Error al eliminar el producto');
   }
 };
+
+// Agregar computed properties para la búsqueda y paginación
+const filteredProductos = computed(() => {
+  if (!searchTerm.value) return productos.value;
+  
+  const searchLower = searchTerm.value.toLowerCase();
+  return productos.value.filter(producto => 
+    producto.nombre?.toLowerCase().includes(searchLower) ||
+    producto.stock?.toString().includes(searchLower) ||
+    producto.precioCosto?.toString().includes(searchLower) ||
+    producto.precioVenta?.toString().includes(searchLower)
+  );
+});
+
+const startIndex = computed(() => (currentPage.value - 1) * itemsPerPage.value);
+const endIndex = computed(() => startIndex.value + itemsPerPage.value);
+
+const paginatedProductos = computed(() => 
+  filteredProductos.value.slice(startIndex.value, endIndex.value)
+);
+
+const totalPages = computed(() => 
+  Math.ceil(filteredProductos.value.length / itemsPerPage.value)
+);
+
+// Agregar funciones de paginación
+const previousPage = () => {
+  if (currentPage.value > 1) {
+    currentPage.value--;
+  }
+};
+
+const nextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++;
+  }
+};
+
+const goToPage = (page) => {
+  currentPage.value = page;
+};
+
+// Agregar watch para resetear la página en búsqueda
+watch(searchTerm, () => {
+  currentPage.value = 1;
+});
+
+// Agregar watch para items por página
+watch(itemsPerPage, () => {
+  currentPage.value = 1;
+});
 
 onMounted(() => {
   fetchProductos();

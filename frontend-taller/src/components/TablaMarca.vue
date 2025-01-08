@@ -17,13 +17,15 @@
           <td class="px-6 py-4">
             <div class="flex items-center space-x-2">
               <button 
-                @click="openEditModal(marca)"
+                type="button"
+                @click.stop="openEditModal(marca)"
                 class="font-medium text-yellow-600 dark:text-yellow-500 hover:underline"
               >
                 Editar
               </button>
               <button 
-                @click="deleteMarca(marca.id)"
+                type="button"
+                @click.stop="deleteMarca(marca.id)"
                 class="font-medium text-red-600 dark:text-red-500 hover:underline"
               >
                 Eliminar
@@ -61,7 +63,7 @@
             {{ isEditing ? 'Actualizar' : 'Guardar' }}
           </button>
           <button 
-            @click="closeModal" 
+            @click="showModal = false" 
             class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg"
           >
             Cancelar
@@ -73,7 +75,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
 import axios from '@/api/axios';
 import { DataTable } from 'simple-datatables';
 
@@ -85,25 +87,9 @@ const form = ref({
   id: null, 
   nombre: '' 
 });
-let dataTable = null; // Variable para mantener la instancia de DataTable
+let dataTable = null;
 
-const fetchMarcas = async () => {
-  try {
-    const response = await axios.get('/marcas');
-    marcas.value = response.data;
-    // Actualizar DataTable si existe
-    if (dataTable) {
-      dataTable.destroy();
-      await initDataTable();
-    }
-  } catch (error) {
-    console.error('Error al obtener marcas:', error);
-    errorMessage.value = 'Error al cargar las marcas';
-  }
-};
-
-const initDataTable = async () => {
-  await nextTick(); // Esperar a que el DOM se actualice
+const initDataTable = () => {
   dataTable = new DataTable("#filter-table", {
     perPage: 10,
     perPageSelect: [5, 10, 15, 20, 25],
@@ -113,6 +99,11 @@ const initDataTable = async () => {
       noRows: "No hay registros para mostrar",
       info: "Mostrando {start} a {end} de {rows} registros",
     },
+    // Agregar estas opciones para mantener los eventos de los botones
+    tableRender: false,
+    columns: [
+      { select: 2, sortable: false, searchable: false } // La columna de acciones
+    ]
   });
 };
 
@@ -126,58 +117,47 @@ const openEditModal = (marca) => {
   showModal.value = true;
 };
 
-const closeModal = () => {
-  showModal.value = false;
-  form.value = { id: null, nombre: '' };
-  errorMessage.value = '';
-  isEditing.value = false;
-};
-
-const saveMarca = async () => {
-  try {
-    if (!form.value.nombre) {
-      errorMessage.value = 'Por favor complete todos los campos';
-      return;
-    }
-
-    const datos = {
-      nombre: form.value.nombre.trim()
-    };
-
-    if (isEditing.value) {
-      await axios.put(`/marcas/${form.value.id}`, datos);
-    } else {
-      await axios.post('/marcas', datos);
-    }
-    
-    closeModal();
-    await fetchMarcas(); // Esto actualizará la tabla correctamente
-  } catch (error) {
-    console.error('Error al guardar marca:', error);
-    errorMessage.value = 'Error al guardar la marca';
-  }
-};
-
 const deleteMarca = async (id) => {
   if (confirm('¿Estás seguro de que deseas eliminar esta marca?')) {
     try {
       await axios.delete(`/marcas/${id}`);
-      await fetchMarcas(); // Esto actualizará la tabla correctamente
+      if (dataTable) {
+        dataTable.destroy();
+      }
+      await fetchMarcas();
+      initDataTable();
     } catch (error) {
       console.error('Error al eliminar marca:', error);
-      errorMessage.value = 'Error al eliminar la marca';
     }
+  }
+};
+
+const fetchMarcas = async () => {
+  try {
+    const response = await axios.get('/marcas');
+    marcas.value = response.data;
+  } catch (error) {
+    console.error('Error al obtener marcas:', error);
   }
 };
 
 onMounted(async () => {
   await fetchMarcas();
-  await initDataTable();
+  initDataTable();
 });
 
 onBeforeUnmount(() => {
   if (dataTable) {
     dataTable.destroy();
+  }
+});
+
+// Exponer la función para el botón de crear
+defineExpose({
+  openCreateModal: () => {
+    form.value = { id: null, nombre: '' };
+    isEditing.value = false;
+    showModal.value = true;
   }
 });
 </script>

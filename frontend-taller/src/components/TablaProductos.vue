@@ -179,17 +179,25 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, nextTick, onUnmounted } from 'vue';
-import { DataTable } from 'simple-datatables';
+import { ref, onMounted } from 'vue';
 import axios from '@/api/axios';
 import { io } from 'socket.io-client';
 
+// Estados
 const productos = ref([]);
 const showFormModal = ref(false);
 const showDeleteModal = ref(false);
 const modalMode = ref('create');
 const selectedProduct = ref(null);
-const dataTable = ref(null);
+const formData = ref({
+  nombre: '',
+  stock: 0,
+  precioCosto: 0,
+  precioVenta: 0,
+  fechaAdquisicion: ''
+});
+
+// Socket.io setup
 const socket = io(import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001', {
   transports: ['websocket'],
   reconnection: true,
@@ -199,116 +207,36 @@ const socket = io(import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001', {
   autoConnect: true,
 });
 
-const formData = ref({
-  nombre: '',
-  stock: 0,
-  precioCosto: 0,
-  precioVenta: 0,
-  fechaAdquisicion: ''
-});
-
-// Función para cargar productos
-const cargarProductos = async () => {
-    try {
-        const response = await axios.get('/productos');
-        productos.value = response.data;
-    } catch (error) {
-        console.error('Error al cargar productos:', error);
-    }
-};
-
-// Función de formateo de fecha
+// Funciones
 const formatDate = (date) => {
   if (!date) return '';
   const fechaUTC = new Date(date);
-  return fechaUTC.toLocaleDateString('es-ES', {
+  const fechaLocal = new Date(fechaUTC.getTime() + fechaUTC.getTimezoneOffset() * 60000);
+  return fechaLocal.toLocaleDateString('es-ES', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit'
   });
-};
-// Función para convertir fecha a formato ISO para el input date
-const formatDateForInput = (date) => {
-  if (!date) return '';
-  return new Date(date).toISOString().split('T')[0];
-};
-
-const initializeDataTable = async () => {
-  await nextTick();
-  const table = document.getElementById("filter-table");
-  if (table && productos.value.length > 0) {
-    if (dataTable.value) {
-      dataTable.value.destroy();
-    }
-    dataTable.value = new DataTable(table, {
-      perPageSelect: [5, 10, 15, 20, 25],
-      labels: {
-        placeholder: "Buscar...",
-        perPage: "{select} registros por página",
-        noRows: "No hay registros",
-        info: "Mostrando {start} a {end} de {rows} registros",
-      },
-    });
-  }
 };
 
 const fetchProductos = async () => {
   try {
     const response = await axios.get('/productos');
     productos.value = response.data;
-    await nextTick();
-    await initializeDataTable();
   } catch (error) {
     console.error('Error al obtener productos:', error);
   }
 };
 
-onMounted(() => {
-  fetchProductos();
-  cargarProductos();
-    
-    // Escuchar actualizaciones de stock
-    socket.on('stockUpdated', () => {
-        cargarProductos();
-    });
-});
-
-// Limpiar socket al desmontar
-onUnmounted(() => {
-    socket.off('stockUpdated');
-    socket.disconnect();
-});
-
-onBeforeUnmount(() => {
-  if (dataTable.value) {
-    dataTable.value.destroy();
-  }
-});
-
-const resetFormData = () => {
-  formData.value = {
-    nombre: '',
-    stock: 0,
-    precioCosto: 0,
-    precioVenta: 0,
-    fechaAdquisicion: ''
-  };
-};
-
-const openCreateModal = () => {
-  modalMode.value = 'create';
-  resetFormData();
+const openViewModal = (producto) => {
+  modalMode.value = 'view';
+  formData.value = { ...producto };
   showFormModal.value = true;
 };
 
 const openEditModal = (producto) => {
   modalMode.value = 'edit';
-  formData.value = { ...producto };
-  showFormModal.value = true;
-};
-
-const openViewModal = (producto) => {
-  modalMode.value = 'view';
+  selectedProduct.value = producto;
   formData.value = { ...producto };
   showFormModal.value = true;
 };
@@ -322,6 +250,7 @@ const closeModal = () => {
     precioVenta: 0,
     fechaAdquisicion: ''
   };
+  selectedProduct.value = null;
 };
 
 const submitForm = async () => {
@@ -334,7 +263,6 @@ const submitForm = async () => {
       alert('Producto actualizado exitosamente');
     }
     showFormModal.value = false;
-    resetFormData();
     await fetchProductos();
   } catch (error) {
     console.error('Error:', error);
@@ -360,10 +288,17 @@ const deleteProducto = async () => {
   }
 };
 
+onMounted(() => {
+  fetchProductos();
+  
+  socket.on('stockUpdated', () => {
+    fetchProductos();
+  });
+});
+
 defineExpose({
-  openCreateModal,
-  openEditModal,
-  openViewModal
+  openViewModal,
+  openEditModal
 });
 </script>
 

@@ -68,6 +68,10 @@ const openAddModal = () => {
 };
 
 const openEditModal = (marca) => {
+  if (!marca || !marca.id) {
+    console.error('Marca inválida:', marca);
+    return;
+  }
   form.value = { ...marca };
   isEditing.value = true;
   showModal.value = true;
@@ -92,16 +96,17 @@ const saveMarca = async () => {
 };
 
 const deleteMarca = async (id) => {
-  if (confirm('¿Estás seguro de que deseas eliminar esta marca?')) {
-    try {
-      await axios.delete(`/marcas/${id}`);
-      await fetchMarcas();
-    } catch (error) {
-      console.error('Error al eliminar marca:', error);
+  try {
+    if (!confirm('¿Estás seguro de que deseas eliminar esta marca?')) {
+      return;
     }
+    await axios.delete(`/marcas/${id}`);
+    await fetchMarcas();
+  } catch (error) {
+    console.error('Error al eliminar marca:', error);
+    alert('Error al eliminar la marca');
   }
 };
-
 onMounted(async () => {
   await fetchMarcas();
   

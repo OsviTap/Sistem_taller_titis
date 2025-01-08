@@ -35,16 +35,10 @@
           <td class="px-6 py-4">{{ modelo.nombre }}</td>
           <td class="px-6 py-4">
             <div class="flex items-center space-x-2">
-              <button 
-                @click="editarModelo(modelo)" 
-                class="font-medium text-yellow-600 dark:text-yellow-500 hover:underline"
-              >
+              <button @click="openEditModal(modelo)" class="font-medium text-yellow-600 dark:text-yellow-500 hover:underline">
                 Editar
               </button>
-              <button 
-                @click="confirmarEliminar(modelo.id)" 
-                class="font-medium text-red-600 dark:text-red-500 hover:underline"
-              >
+              <button @click="deleteModelo(modelo.id)" class="font-medium text-red-600 dark:text-red-500 hover:underline">
                 Eliminar
               </button>
             </div>
@@ -159,13 +153,16 @@ const openAddModal = () => {
 };
 
 const openEditModal = (modelo) => {
+  if (!modelo || !modelo.id) {
+    console.error('Modelo inválido:', modelo);
+    return;
+  }
   form.value = {
     id: modelo.id,
     marcaId: modelo.marcaId,
     nombre: modelo.nombre
   };
   isEditing.value = true;
-  errorMessage.value = '';  // Limpiar mensaje de error
   showModal.value = true;
 };
 
@@ -211,14 +208,15 @@ const saveModelo = async () => {
 };
 
 const deleteModelo = async (id) => {
-  if (confirm('¿Estás seguro de que deseas eliminar este modelo?')) {
-    try {
-      await axios.delete(`/modelos/${id}`);
-      await fetchModelos();
-    } catch (error) {
-      console.error('Error al eliminar modelo:', error);
-      errorMessage.value = 'Error al eliminar el modelo';
+  try {
+    if (!confirm('¿Estás seguro de que deseas eliminar este modelo?')) {
+      return;
     }
+    await axios.delete(`/modelos/${id}`);
+    await fetchModelos();
+  } catch (error) {
+    console.error('Error al eliminar modelo:', error);
+    errorMessage.value = 'Error al eliminar el modelo';
   }
 };
 

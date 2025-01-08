@@ -5,25 +5,25 @@
     <table id="filter-table" class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
       <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
         <tr>
-          
+          <th scope="col" class="px-6 py-3">ID</th>
           <th scope="col" class="px-6 py-3">Nombre</th>
           <th scope="col" class="px-6 py-3">Acciones</th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="marca in marcas" :key="marca.id" class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
-          
+        <tr v-for="marca in marcas" :key="marca.id" class="bg-white border-b hover:bg-gray-50">
+          <td class="px-6 py-4">{{ marca.id }}</td>
           <td class="px-6 py-4">{{ marca.nombre }}</td>
           <td class="px-6 py-4">
             <div class="flex items-center space-x-2">
               <button 
-                @click="openEditModal(marca)" 
+                @click="openEditModal(marca)"
                 class="font-medium text-yellow-600 dark:text-yellow-500 hover:underline"
               >
                 Editar
               </button>
               <button 
-                @click="deleteMarca(marca.id)" 
+                @click="deleteMarca(marca.id)"
                 class="font-medium text-red-600 dark:text-red-500 hover:underline"
               >
                 Eliminar
@@ -73,7 +73,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import axios from '@/api/axios';
 import { DataTable } from 'simple-datatables';
 
@@ -85,24 +85,38 @@ const form = ref({
   id: null, 
   nombre: '' 
 });
+let dataTable = null; // Variable para mantener la instancia de DataTable
 
-//Funcion para obtener las marcas
 const fetchMarcas = async () => {
-  const response = await axios.get('/marcas');
-  marcas.value = response.data;
+  try {
+    const response = await axios.get('/marcas');
+    marcas.value = response.data;
+    // Actualizar DataTable si existe
+    if (dataTable) {
+      dataTable.destroy();
+      await initDataTable();
+    }
+  } catch (error) {
+    console.error('Error al obtener marcas:', error);
+    errorMessage.value = 'Error al cargar las marcas';
+  }
 };
 
-const openAddModal = () => {
-  form.value = { id: null, nombre: '' };
-  isEditing.value = false;
-  showModal.value = true;
+const initDataTable = async () => {
+  await nextTick(); // Esperar a que el DOM se actualice
+  dataTable = new DataTable("#filter-table", {
+    perPage: 10,
+    perPageSelect: [5, 10, 15, 20, 25],
+    labels: {
+      placeholder: "Buscar marca...",
+      perPage: "Registros por página",
+      noRows: "No hay registros para mostrar",
+      info: "Mostrando {start} a {end} de {rows} registros",
+    },
+  });
 };
 
 const openEditModal = (marca) => {
-  if (!marca || !marca.id) {
-    console.error('Marca inválida:', marca);
-    return;
-  }
   form.value = {
     id: marca.id,
     nombre: marca.nombre
@@ -116,11 +130,11 @@ const closeModal = () => {
   showModal.value = false;
   form.value = { id: null, nombre: '' };
   errorMessage.value = '';
+  isEditing.value = false;
 };
 
 const saveMarca = async () => {
   try {
-    // Validaciones
     if (!form.value.nombre) {
       errorMessage.value = 'Por favor complete todos los campos';
       return;
@@ -130,25 +144,17 @@ const saveMarca = async () => {
       nombre: form.value.nombre.trim()
     };
 
-    console.log('Datos a enviar:', datos); // Debug
-
     if (isEditing.value) {
-      const response = await axios.put(`/marcas/${form.value.id}`, datos);
-      console.log('Respuesta edición:', response.data);
+      await axios.put(`/marcas/${form.value.id}`, datos);
     } else {
-      const response = await axios.post('/marcas', datos);
-      console.log('Respuesta creación:', response.data);
+      await axios.post('/marcas', datos);
     }
     
-    await fetchMarcas();
     closeModal();
-  } catch (err) {
-    console.error('Error al guardar marca:', err);
-    // Mostrar mensaje de error más específico
-    const errorMsg = err.response?.data?.error || 
-                    err.response?.data?.details || 
-                    'Error al guardar la marca';
-    errorMessage.value = Array.isArray(errorMsg) ? errorMsg.join(', ') : errorMsg;
+    await fetchMarcas(); // Esto actualizará la tabla correctamente
+  } catch (error) {
+    console.error('Error al guardar marca:', error);
+    errorMessage.value = 'Error al guardar la marca';
   }
 };
 
@@ -156,29 +162,23 @@ const deleteMarca = async (id) => {
   if (confirm('¿Estás seguro de que deseas eliminar esta marca?')) {
     try {
       await axios.delete(`/marcas/${id}`);
-      await fetchMarcas();
+      await fetchMarcas(); // Esto actualizará la tabla correctamente
     } catch (error) {
       console.error('Error al eliminar marca:', error);
       errorMessage.value = 'Error al eliminar la marca';
     }
   }
 };
+
 onMounted(async () => {
   await fetchMarcas();
-  
-  const dataTable = new DataTable("#filter-table", {
-    perPage: 10,
-    perPageSelect: [5, 10, 15, 20, 25],
-    labels: {
-      placeholder: "Buscar marca...",
-      perPage: "Registros por página",
-      noRows: "No hay registros para mostrar",
-      info: "Mostrando {start} a {end} de {rows} registros",
-    },
-  });
+  await initDataTable();
 });
-defineExpose({
-  openCreateModal: openAddModal,
+
+onBeforeUnmount(() => {
+  if (dataTable) {
+    dataTable.destroy();
+  }
 });
 </script>
 

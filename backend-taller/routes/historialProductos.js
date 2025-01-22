@@ -171,4 +171,22 @@ router.post('/', async (req, res) => {
     }
 });
 
+// Agregar esta nueva ruta para eliminar
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const registro = await ProductHistory.findByPk(id);
+    
+    if (!registro) {
+      return res.status(404).json({ error: 'Registro no encontrado' });
+    }
+
+    await registro.destroy();
+    res.json({ message: 'Registro eliminado correctamente' });
+  } catch (error) {
+    console.error('Error al eliminar registro:', error);
+    res.status(500).json({ error: 'Error al eliminar registro del historial' });
+  }
+});
+
 module.exports = router;

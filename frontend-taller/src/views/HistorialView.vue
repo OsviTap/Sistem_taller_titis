@@ -89,6 +89,62 @@
         </tbody>
       </table>
     </div>
+
+    <!-- Paginación -->
+    <div class="flex justify-between items-center mt-4">
+      <div class="text-sm text-gray-700 dark:text-gray-400">
+        Mostrando
+        <span class="font-semibold text-gray-900 dark:text-white">{{ paginaInicio }}</span>
+        a
+        <span class="font-semibold text-gray-900 dark:text-white">{{ paginaFin }}</span>
+        de
+        <span class="font-semibold text-gray-900 dark:text-white">{{ visitasFiltradas.length }}</span>
+        resultados
+      </div>
+      <div class="flex space-x-2">
+        <button
+          @click="cambiarPagina(1)"
+          :disabled="paginaActual === 1"
+          class="px-3 py-1 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          «
+        </button>
+        <button
+          @click="cambiarPagina(paginaActual - 1)"
+          :disabled="paginaActual === 1"
+          class="px-3 py-1 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          ‹
+        </button>
+        
+        <button
+          v-for="pagina in paginasVisibles"
+          :key="pagina"
+          @click="cambiarPagina(pagina)"
+          :class="[
+            'px-3 py-1 border rounded-md',
+            paginaActual === pagina ? 'bg-blue-500 text-white' : 'bg-white text-gray-700'
+          ]"
+        >
+          {{ pagina }}
+        </button>
+        
+        <button
+          @click="cambiarPagina(paginaActual + 1)"
+          :disabled="paginaActual === totalPaginas"
+          class="px-3 py-1 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          ›
+        </button>
+        <button
+          @click="cambiarPagina(totalPaginas)"
+          :disabled="paginaActual === totalPaginas"
+          class="px-3 py-1 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          »
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -306,6 +362,66 @@ const limpiarFechas = () => {
   fechaInicio.value = '';
   fechaFin.value = '';
   clienteFilter.value = '';
+};
+
+// Paginación
+const itemsPorPagina = 10;
+const paginaActual = ref(1);
+
+// Computed properties para paginación
+const totalPaginas = computed(() => Math.ceil(visitasFiltradas.value.length / itemsPorPagina));
+
+const paginaInicio = computed(() => {
+  return ((paginaActual.value - 1) * itemsPorPagina) + 1;
+});
+
+const paginaFin = computed(() => {
+  return Math.min(paginaActual.value * itemsPorPagina, visitasFiltradas.value.length);
+});
+
+const paginasVisibles = computed(() => {
+  const totalBotones = 5; // Número de botones de página a mostrar
+  const mitad = Math.floor(totalBotones / 2);
+  
+  let inicio = Math.max(paginaActual.value - mitad, 1);
+  let fin = Math.min(inicio + totalBotones - 1, totalPaginas.value);
+  
+  // Ajustar el inicio si estamos cerca del final
+  if (fin === totalPaginas.value) {
+    inicio = Math.max(fin - totalBotones + 1, 1);
+  }
+  
+  // Generar array de páginas visibles
+  const paginas = [];
+  for (let i = inicio; i <= fin; i++) {
+    paginas.push(i);
+  }
+  
+  return paginas;
+});
+
+const visitasPaginadas = computed(() => {
+  const inicio = (paginaActual.value - 1) * itemsPorPagina;
+  const fin = inicio + itemsPorPagina;
+  return visitasFiltradas.value.slice(inicio, fin);
+});
+
+const cambiarPagina = (pagina) => {
+  if (pagina >= 1 && pagina <= totalPaginas.value) {
+    paginaActual.value = pagina;
+  }
+};
+
+// Función para eliminar visita
+const eliminarVisita = async (id) => {
+  if (confirm('¿Estás seguro de que deseas eliminar esta visita?')) {
+    try {
+      await axios.delete(`/historiales/${id}`);
+      await obtenerVisitas(); // Recargar la lista después de eliminar
+    } catch (error) {
+      console.error('Error al eliminar visita:', error);
+    }
+  }
 };
 </script>
 

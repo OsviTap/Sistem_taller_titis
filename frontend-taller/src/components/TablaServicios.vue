@@ -2,7 +2,7 @@
     <div class="relative overflow-x-auto shadow-md sm:rounded-lg m-4">
     
     <!-- Tabla -->
-    <table id="filter-table" class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+    <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
       <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
         <tr>
           
@@ -32,13 +32,14 @@
       </tbody>
     </table>
       <!-- Modal para agregar/editar marca -->
-      <div v-if="showModal" class="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50">
-        <div class="bg-white p-6 rounded-lg shadow-lg w-96">
+      <div v-if="showModal" class="fixed inset-0 flex items-center justify-center z-50">
+        <div class="fixed inset-0 bg-gray-900 bg-opacity-50"></div>
+        <div class="bg-white p-6 rounded-lg shadow-lg w-96 relative z-10">
           <h3 class="text-lg font-semibold mb-4">{{ isEditing ? 'Editar Servicio' : 'Agregar Servicio' }}</h3>
           <input v-model="form.nombre" type="text" placeholder="Nombre" class="w-full mb-4 p-2 border rounded-lg">
             <input v-model="form.precio" type="number" placeholder="Precio" class="w-full mb-4 p-2 border rounded-lg">
             <input v-model="form.descripcion" type="text"  placeholder="Descripcion" class="block w-full p-7 text-gray-900 border rounded-lg bg-gray-50 text-base focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
-          <div class="flex justify-end space-x-2 mb-3 p-4">
+          <div class="flex justify-end space-x-2 mt-4">
             <button @click="saveServicio" class="px-4 py-2 text-white bg-blue-500 hover:bg-blue-700 rounded-lg">
               Guardar
             </button>
@@ -52,44 +53,18 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue';
+import { ref, onMounted } from 'vue';
 import axios from '@/api/axios';
-import { DataTable } from 'simple-datatables';
 
 const servicios = ref([]);
 const showModal = ref(false);
 const isEditing = ref(false);
 const form = ref({ id: null, nombre: '', precio: null, descripcion: '' });
-let dataTable = null; // Variable para almacenar la instancia de DataTable
 
 const fetchServicios = async () => {
   try {
     const response = await axios.get('/servicios');
     servicios.value = response.data;
-    
-    // Si existe una instancia previa de DataTable, destruirla
-    if (dataTable) {
-      dataTable.destroy();
-    }
-    
-    // Inicializar DataTable después de actualizar los datos
-    nextTick(() => {
-      if (document.getElementById("filter-table")) {
-        dataTable = new DataTable("#filter-table", {
-          labels: {
-            perPage: "Servicios por página",
-            placeholder: "Buscar servicio...",
-          },
-          perPage: 10,
-          perPageSelect: [5, 10, 15, 20, 25],
-          searchable: true,
-          sortable: true,
-          // Deshabilitar los eventos que puedan interferir con Vue
-          tableRender: false,
-          rowRender: false
-        });
-      }
-    });
   } catch (error) {
     console.error('Error al cargar servicios:', error);
   }

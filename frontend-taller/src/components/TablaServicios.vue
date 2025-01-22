@@ -23,7 +23,7 @@
               <button @click="openEditModal(servicio)" class="font-medium text-yellow-600 dark:text-yellow-500 hover:underline">
                 Editar
               </button>
-              <button @click="deleteServicio(servicioid)" class="font-medium text-red-600 dark:text-red-500 hover:underline">
+              <button @click="deleteServicio(servicio.id)" class="font-medium text-red-600 dark:text-red-500 hover:underline">
                 Eliminar
               </button>
             </div>
@@ -52,7 +52,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, nextTick } from 'vue';
 import axios from '@/api/axios';
 import { DataTable } from 'simple-datatables';
 
@@ -60,17 +60,43 @@ const servicios = ref([]);
 const showModal = ref(false);
 const isEditing = ref(false);
 const form = ref({ id: null, nombre: '', precio: null, descripcion: '' });
-
+let dataTable = null; // Variable para almacenar la instancia de DataTable
 
 const fetchServicios = async () => {
-  const response = await axios.get('/servicios');
-  servicios.value = response.data;
+  try {
+    const response = await axios.get('/servicios');
+    servicios.value = response.data;
+    
+    // Si existe una instancia previa de DataTable, destruirla
+    if (dataTable) {
+      dataTable.destroy();
+    }
+    
+    // Inicializar DataTable después de actualizar los datos
+    nextTick(() => {
+      if (document.getElementById("filter-table")) {
+        dataTable = new DataTable("#filter-table", {
+          labels: {
+            perPage: "Servicios por página",
+            placeholder: "Buscar servicio...",
+          },
+          perPage: 10,
+          perPageSelect: [5, 10, 15, 20, 25],
+          searchable: true,
+          sortable: true,
+          // Deshabilitar los eventos que puedan interferir con Vue
+          tableRender: false,
+          rowRender: false
+        });
+      }
+    });
+  } catch (error) {
+    console.error('Error al cargar servicios:', error);
+  }
 };
 
 const openAddModal = () => {
-  form.value = { id: null, nombre: '' };
-  form.value = { id: null, precio: '' };
-  form.value = { id: null, descripcion: '' };
+  form.value = { id: null, nombre: '', precio: '', descripcion: '' };
   isEditing.value = false;
   showModal.value = true;
 };
@@ -83,38 +109,38 @@ const openEditModal = (servicio) => {
 
 const closeModal = () => {
   showModal.value = false;
+  form.value = { id: null, nombre: '', precio: '', descripcion: '' };
 };
 
 const saveServicio = async () => {
-  if (isEditing.value) {
-    await axios.put(`/servicios/${form.value.id}`, form.value);
-  } else {
-    await axios.post('/servicios', form.value);
-    window.location.reload();
+  try {
+    if (isEditing.value) {
+      await axios.put(`/servicios/${form.value.id}`, form.value);
+    } else {
+      await axios.post('/servicios', form.value);
+    }
+    await fetchServicios();
+    closeModal();
+  } catch (error) {
+    console.error('Error al guardar servicio:', error);
   }
-  closeModal();
-  fetchServicios();
 };
 
-const deleteMarca = async (id) => {
+const deleteServicio = async (id) => {
   if (confirm('¿Estás seguro de que deseas eliminar este servicio?')) {
-    await axios.delete(`/servicios/${id}`);
-    fetchServicios();
+    try {
+      await axios.delete(`/servicios/${id}`);
+      await fetchServicios();
+    } catch (error) {
+      console.error('Error al eliminar servicio:', error);
+    }
   }
 };
 
-onMounted(async () => {
-  await fetchServicios();
-
-  if (document.getElementById("filter-table")) {
-    const dataTable = new DataTable("#filter-table", {
-      labels: {
-        perPage: "Servicios por página",
-        placeholder: "Buscar servicio...",
-      },
-    });
-  }
+onMounted(() => {
+  fetchServicios();
 });
+
 defineExpose({
   openCreateModal: openAddModal,
 });

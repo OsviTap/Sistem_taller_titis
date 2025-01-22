@@ -29,7 +29,7 @@
         {{ error }}
       </div>
 
-      <div v-if="productosStockBajo.length > 0" class="overflow-x-auto">
+      <div v-if="productosPaginados.length > 0" class="overflow-x-auto">
         <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
           <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
             <tr>
@@ -39,7 +39,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="producto in productosStockBajo" 
+            <tr v-for="producto in productosPaginados" 
                 :key="producto.id" 
                 class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
               <td class="px-6 py-4 whitespace-nowrap">{{ producto.nombre }}</td>
@@ -51,12 +51,12 @@
           </tbody>
         </table>
       </div>
-      <div v-else class="p-4 text-center text-gray-500 dark:text-gray-400">
-        No hay productos con stock bajo
+      <div v-else-if="!isLoading" class="p-4 text-center text-gray-500">
+        No hay productos con stock bajo.
       </div>
 
       <Paginacion
-        v-if="productosStockBajo.length > 0"
+        v-if="totalItems > 0"
         :current-page="currentPage"
         :items-per-page="itemsPerPage"
         :total-items="totalItems"
@@ -65,75 +65,83 @@
     </div>
 </template>
   
-  <script setup>
-  import { ref, onMounted, onUnmounted } from 'vue';
-  import axios from '@/api/axios';
-  import { io } from 'socket.io-client';
-  import Paginacion from '@/components/Paginacion.vue';
-  
-  const productosStockBajo = ref([]);
-  const isLoading = ref(false);
-  const error = ref(null);
-  
-  const STOCK_BAJO_UMBRAL = ref(5);
-  const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001';
-  const socket = io(SOCKET_URL);
-  
-  const currentPage = ref(1);
-  const itemsPerPage = ref(10);
-  const totalItems = ref(0);
-  
-  const cargarProductosStockBajo = async () => {
-    isLoading.value = true;
-    error.value = null;
-    try {
-      const response = await axios.get('/productos', {
-        params: {
-          page: currentPage.value,
-          limit: itemsPerPage.value
-        }
-      });
-      
-      const productos = response.data.productos || response.data;
-      totalItems.value = response.data.total || productos.length;
-      
-      productosStockBajo.value = productos.filter(
-        producto => producto.stock < STOCK_BAJO_UMBRAL.value
-      );
-    } catch (err) {
-      error.value = 'Error al cargar productos: ' + err.message;
-      console.error('Error al cargar productos:', err);
-    } finally {
-      isLoading.value = false;
-    }
-  };
-  
-  const cambiarPagina = (pagina) => {
-    currentPage.value = pagina;
-    cargarProductosStockBajo();
-  };
-  
-  const cambiarUmbralStockBajo = (nuevoUmbral) => {
-    STOCK_BAJO_UMBRAL.value = nuevoUmbral;
-    cargarProductosStockBajo();
-  };
-  
-  onMounted(() => {
-    cargarProductosStockBajo();
-    
-    socket.on('stockUpdated', () => {
-      cargarProductosStockBajo();
-    });
+<script setup>
+import { ref, onMounted, onUnmounted, computed } from 'vue';
+import axios from '@/api/axios';
+import { io } from 'socket.io-client';
+import Paginacion from './Paginacion.vue';
 
-    socket.on('connect_error', (error) => {
-      console.error('Error de conexión con Socket.IO:', error);
-      error.value = 'Error de conexión con el servidor de tiempo real';
-    });
-  });
+// Variables de estado
+const productosStockBajo = ref([]);
+const isLoading = ref(false);
+const error = ref(null);
+
+// Configuración
+const STOCK_BAJO_UMBRAL = ref(5);
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001';
+const socket = io(SOCKET_URL);
+
+// Paginación
+const currentPage = ref(1);
+const itemsPerPage = ref(10);
+const totalItems = ref(0);
+const todosLosProductos = ref([]); // Almacena todos los productos
+
+const productosPaginados = computed(() => {
+  const inicio = (currentPage.value - 1) * itemsPerPage.value;
+  const fin = inicio + itemsPerPage.value;
+  return productosStockBajo.value.slice(inicio, fin);
+});
+
+const cargarProductosStockBajo = async () => {
+  isLoading.value = true;
+  error.value = null;
+  try {
+    const response = await axios.get('/productos');
+    const productos = response.data.productos || response.data;
+    
+    // Filtrar productos con stock bajo
+    todosLosProductos.value = productos.filter(
+      producto => producto.stock < STOCK_BAJO_UMBRAL.value
+    );
+    
+    // Actualizar total de items y productos paginados
+    totalItems.value = todosLosProductos.value.length;
+    productosStockBajo.value = todosLosProductos.value;
+    
+  } catch (err) {
+    error.value = 'Error al cargar productos: ' + err.message;
+    console.error('Error al cargar productos:', err);
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+const cambiarPagina = (pagina) => {
+  currentPage.value = pagina;
+};
+
+const cambiarUmbralStockBajo = (nuevoUmbral) => {
+  STOCK_BAJO_UMBRAL.value = nuevoUmbral;
+  cargarProductosStockBajo();
+};
+
+onMounted(() => {
+  cargarProductosStockBajo();
   
-  onUnmounted(() => {
-    socket.off('stockUpdated');
-    socket.off('connect_error');
-    socket.disconnect();
+  socket.on('stockUpdated', () => {
+    cargarProductosStockBajo();
   });
-  </script>
+
+  socket.on('connect_error', (error) => {
+    console.error('Error de conexión con Socket.IO:', error);
+    error.value = 'Error de conexión con el servidor de tiempo real';
+  });
+});
+
+onUnmounted(() => {
+  socket.off('stockUpdated');
+  socket.off('connect_error');
+  socket.disconnect();
+});
+</script>

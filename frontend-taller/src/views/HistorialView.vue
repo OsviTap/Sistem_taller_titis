@@ -72,18 +72,26 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-if="visitasFiltradas.length === 0">
+          <tr v-if="visitasPaginadas.length === 0">
             <td colspan="7" class="text-center px-6 py-4">No hay registros disponibles.</td>
           </tr>
-          <tr v-for="visita in visitasFiltradasBusqueda" :key="visita.id" class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+          <tr v-for="visita in visitasPaginadas" :key="visita.id" class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
             <td class="px-6 py-4">{{ formatDate(visita.fecha) }}</td>
-            <td class="px-6 py-4">{{ visita.Cliente ? visita.Cliente.nombre : 'Sin Cliente' }}</td>
-            <td class="px-6 py-4">{{ visita.Vehiculo ? visita.Vehiculo.placa : 'Sin Vehículo' }}</td>
+            <td class="px-6 py-4">{{ visita.Cliente?.nombre || 'Sin Cliente' }}</td>
+            <td class="px-6 py-4">{{ visita.Vehiculo?.placa || 'Sin Vehículo' }}</td>
             <td class="px-6 py-4">{{ visita.kilometraje }} km</td>
             <td class="px-6 py-4">{{ visita.proximoCambio }} km</td>
             <td class="px-6 py-4">Bs {{ visita.total }}</td>
             <td class="px-6 py-4">
-              <button @click="generarPDF(visita)" class="btn-primary">Ver</button>
+              <div class="flex space-x-2">
+                <button @click="generarPDF(visita)" class="btn-primary">Ver</button>
+                <button 
+                  @click="eliminarVisita(visita.id)"
+                  class="text-red-600 hover:text-red-900 font-medium"
+                >
+                  Eliminar
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -151,7 +159,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { DataTable } from 'simple-datatables';
 import axios from '@/api/axios';
 import jsPDF from 'jspdf';
 
@@ -163,6 +170,10 @@ const fechaFin = ref('');
 const route = useRoute();
 const searchQuery = ref('');
 
+// Paginación
+const itemsPorPagina = 10;
+const paginaActual = ref(1);
+
 const obtenerClientes = async () => {
   try {
     const response = await axios.get('/clientes');
@@ -172,54 +183,71 @@ const obtenerClientes = async () => {
   }
 };
 
-// Agregar nuevo computed para búsqueda
-const visitasFiltradasBusqueda = computed(() => {
-  return visitasFiltradas.value.filter(visita => {
-    const busqueda = searchQuery.value.toLowerCase();
-    return (
-      visita.Cliente?.nombre?.toLowerCase().includes(busqueda) ||
-      visita.Vehiculo?.placa?.toLowerCase().includes(busqueda) ||
-      `${visita.Vehiculo?.marcaVehiculo?.nombre} ${visita.Vehiculo?.modeloVehiculo?.nombre}`
-        .toLowerCase()
-        .includes(busqueda) ||
-      visita.kilometraje?.toString().includes(busqueda) ||
-      visita.total?.toString().includes(busqueda)
-    );
-  });
-});
-
+// Filtrado de visitas
 const visitasFiltradas = computed(() => {
-  return visitas.value.filter(visita => {
-    const cumpleCliente = clienteFilter.value
-      ? visita.Cliente?.id === clienteFilter.value
-      : true;
+  let resultado = visitas.value.filter(visita => {
+    // Filtro por cliente
+    const cumpleCliente = !clienteFilter.value || 
+      visita.clienteId === parseInt(clienteFilter.value);
 
-    const cumpleFechaInicio = fechaInicio.value
-      ? new Date(visita.fecha) >= new Date(fechaInicio.value)
-      : true;
+    // Filtro por fechas
+    const cumpleFechaInicio = !fechaInicio.value || 
+      new Date(visita.fecha) >= new Date(fechaInicio.value);
+    const cumpleFechaFin = !fechaFin.value || 
+      new Date(visita.fecha) <= new Date(fechaFin.value);
 
-    const cumpleFechaFin = fechaFin.value
-      ? new Date(visita.fecha) <= new Date(fechaFin.value)
-      : true;
-    // Nuevos filtros por parámetros de URL
-    const cumpleFechaEspecifica = route.query.fecha
-      ? visita.fecha === route.query.fecha
-      : true;
-
-    const cumpleClienteId = route.query.clienteId
-      ? visita.clienteId === parseInt(route.query.clienteId)
-      : true;
-
-    const cumpleVehiculoId = route.query.vehiculoId
-      ? visita.vehiculoId === parseInt(route.query.vehiculoId)
-      : true;
-
-    return cumpleCliente && cumpleFechaInicio && cumpleFechaFin && 
-           cumpleFechaEspecifica && cumpleClienteId && cumpleVehiculoId;
+    return cumpleCliente && cumpleFechaInicio && cumpleFechaFin;
   });
+
+  // Aplicar búsqueda si existe
+  if (searchQuery.value) {
+    const busqueda = searchQuery.value.toLowerCase();
+    resultado = resultado.filter(visita => {
+      return (
+        visita.Cliente?.nombre?.toLowerCase().includes(busqueda) ||
+        visita.Vehiculo?.placa?.toLowerCase().includes(busqueda)
+      );
+    });
+  }
+
+  return resultado;
 });
 
-// Función para obtener el historial de visitas
+// Paginación
+const totalPaginas = computed(() => Math.ceil(visitasFiltradas.value.length / itemsPorPagina));
+
+const paginasVisibles = computed(() => {
+  const totalBotones = 5;
+  const mitad = Math.floor(totalBotones / 2);
+  let inicio = Math.max(paginaActual.value - mitad, 1);
+  let fin = Math.min(inicio + totalBotones - 1, totalPaginas.value);
+  
+  if (fin === totalPaginas.value) {
+    inicio = Math.max(fin - totalBotones + 1, 1);
+  }
+  
+  const paginas = [];
+  for (let i = inicio; i <= fin; i++) {
+    paginas.push(i);
+  }
+  return paginas;
+});
+
+const visitasPaginadas = computed(() => {
+  const inicio = (paginaActual.value - 1) * itemsPorPagina;
+  const fin = inicio + itemsPorPagina;
+  return visitasFiltradas.value.slice(inicio, fin);
+});
+
+const paginaInicio = computed(() => ((paginaActual.value - 1) * itemsPorPagina) + 1);
+const paginaFin = computed(() => Math.min(paginaActual.value * itemsPorPagina, visitasFiltradas.value.length));
+
+const cambiarPagina = (pagina) => {
+  if (pagina >= 1 && pagina <= totalPaginas.value) {
+    paginaActual.value = pagina;
+  }
+};
+
 const obtenerVisitas = async () => {
   try {
     const response = await axios.get('/historiales');
@@ -228,6 +256,31 @@ const obtenerVisitas = async () => {
     console.error('Error al cargar datos:', error);
   }
 };
+
+const eliminarVisita = async (id) => {
+  if (confirm('¿Estás seguro de que deseas eliminar esta visita?')) {
+    try {
+      await axios.delete(`/historiales/${id}`);
+      await obtenerVisitas();
+    } catch (error) {
+      console.error('Error al eliminar visita:', error);
+    }
+  }
+};
+
+const limpiarFechas = () => {
+  fechaInicio.value = '';
+  fechaFin.value = '';
+};
+
+const formatDate = (dateString) => {
+  return new Date(dateString).toLocaleDateString('es-ES');
+};
+
+onMounted(() => {
+  obtenerClientes();
+  obtenerVisitas();
+});
 
 // Función para generar PDF
 const generarPDF = async (visita) => {
@@ -339,88 +392,6 @@ const generarPDF = async (visita) => {
 
   } catch (error) {
     console.error('Error al generar PDF:', error);
-  }
-};
-
-// Llama a la función para obtener los datos al montar el componente
-onMounted(() => {
-  obtenerVisitas();
-  obtenerClientes();
-});
-
-// Función para formatear la fecha
-const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleDateString('es-ES', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-};
-
-// Función para limpiar las fechas
-const limpiarFechas = () => {
-  fechaInicio.value = '';
-  fechaFin.value = '';
-  clienteFilter.value = '';
-};
-
-// Paginación
-const itemsPorPagina = 10;
-const paginaActual = ref(1);
-
-// Computed properties para paginación
-const totalPaginas = computed(() => Math.ceil(visitasFiltradas.value.length / itemsPorPagina));
-
-const paginaInicio = computed(() => {
-  return ((paginaActual.value - 1) * itemsPorPagina) + 1;
-});
-
-const paginaFin = computed(() => {
-  return Math.min(paginaActual.value * itemsPorPagina, visitasFiltradas.value.length);
-});
-
-const paginasVisibles = computed(() => {
-  const totalBotones = 5; // Número de botones de página a mostrar
-  const mitad = Math.floor(totalBotones / 2);
-  
-  let inicio = Math.max(paginaActual.value - mitad, 1);
-  let fin = Math.min(inicio + totalBotones - 1, totalPaginas.value);
-  
-  // Ajustar el inicio si estamos cerca del final
-  if (fin === totalPaginas.value) {
-    inicio = Math.max(fin - totalBotones + 1, 1);
-  }
-  
-  // Generar array de páginas visibles
-  const paginas = [];
-  for (let i = inicio; i <= fin; i++) {
-    paginas.push(i);
-  }
-  
-  return paginas;
-});
-
-const visitasPaginadas = computed(() => {
-  const inicio = (paginaActual.value - 1) * itemsPorPagina;
-  const fin = inicio + itemsPorPagina;
-  return visitasFiltradas.value.slice(inicio, fin);
-});
-
-const cambiarPagina = (pagina) => {
-  if (pagina >= 1 && pagina <= totalPaginas.value) {
-    paginaActual.value = pagina;
-  }
-};
-
-// Función para eliminar visita
-const eliminarVisita = async (id) => {
-  if (confirm('¿Estás seguro de que deseas eliminar esta visita?')) {
-    try {
-      await axios.delete(`/historiales/${id}`);
-      await obtenerVisitas(); // Recargar la lista después de eliminar
-    } catch (error) {
-      console.error('Error al eliminar visita:', error);
-    }
   }
 };
 </script>

@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.47.10",
-    "apexcharts": "^4.3.0",
+    "apexcharts": "^4.4.0",
     "axios": "^1.7.9",
     "flowbite": "^2.5.2",
     "html2canvas": "^1.4.1",

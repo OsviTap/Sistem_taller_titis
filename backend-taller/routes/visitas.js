@@ -71,8 +71,32 @@ router.get('/', async (req, res) => {
             distinct: true
         });
 
+        // Enriquecer detalles con nombres de productos/servicios
+        const { Servicio } = require('../models');
+        const visitasEnriquecidas = await Promise.all(
+            rows.map(async (visita) => {
+                const visitaJSON = visita.toJSON();
+                if (visitaJSON.detalles && visitaJSON.detalles.length > 0) {
+                    visitaJSON.detalles = await Promise.all(
+                        visitaJSON.detalles.map(async (detalle) => {
+                            let nombre = 'N/A';
+                            if (detalle.tipo === 'Producto') {
+                                const producto = await Producto.findByPk(detalle.itemId, { attributes: ['nombre'] });
+                                nombre = producto ? producto.nombre : 'Producto eliminado';
+                            } else if (detalle.tipo === 'Servicio') {
+                                const servicio = await Servicio.findByPk(detalle.itemId, { attributes: ['nombre'] });
+                                nombre = servicio ? servicio.nombre : 'Servicio eliminado';
+                            }
+                            return { ...detalle, nombre };
+                        })
+                    );
+                }
+                return visitaJSON;
+            })
+        );
+
         res.json({
-            data: rows,
+            data: visitasEnriquecidas,
             totalItems: count,
             totalPages: Math.ceil(count / limit),
             currentPage: parseInt(page)
@@ -175,10 +199,65 @@ router.post('/', async (req, res) => {
 // Obtener una visita por ID
 router.get('/:id', async (req, res) => {
     try {
-        const visita = await Visita.findByPk(req.params.id, { include: Servicio });
-        if (!visita) return res.status(404).json({ error: 'Visita no encontrada' });
-        res.json(visita);
+        const visita = await Visita.findByPk(req.params.id, {
+            include: [
+                {
+                    model: Cliente,
+                    attributes: ['id', 'nombre', 'telefono', 'direccion', 'nit']
+                },
+                {
+                    model: Vehiculo,
+                    attributes: ['id', 'placa'],
+                    include: [
+                        {
+                            model: Marca,
+                            as: 'marcaVehiculo',
+                            attributes: ['id', 'nombre']
+                        },
+                        {
+                            model: Modelo,
+                            as: 'modeloVehiculo',
+                            attributes: ['id', 'nombre']
+                        }
+                    ]
+                },
+                {
+                    model: DetalleVisita,
+                    as: 'detalles',
+                    attributes: ['id', 'tipo', 'itemId', 'precio', 'cantidad', 'subtotal']
+                }
+            ]
+        });
+
+        if (!visita) {
+            return res.status(404).json({ error: 'Visita no encontrada' });
+        }
+
+        // Enriquecer los detalles con nombres de productos/servicios
+        const { Servicio } = require('../models');
+        const detallesEnriquecidos = await Promise.all(
+            visita.detalles.map(async (detalle) => {
+                let nombre = 'N/A';
+                if (detalle.tipo === 'Producto') {
+                    const producto = await Producto.findByPk(detalle.itemId, { attributes: ['nombre'] });
+                    nombre = producto ? producto.nombre : 'Producto eliminado';
+                } else if (detalle.tipo === 'Servicio') {
+                    const servicio = await Servicio.findByPk(detalle.itemId, { attributes: ['nombre'] });
+                    nombre = servicio ? servicio.nombre : 'Servicio eliminado';
+                }
+                return {
+                    ...detalle.toJSON(),
+                    nombre
+                };
+            })
+        );
+
+        const visitaCompleta = visita.toJSON();
+        visitaCompleta.detalles = detallesEnriquecidos;
+
+        res.json(visitaCompleta);
     } catch (err) {
+        console.error('Error al obtener visita:', err);
         res.status(500).json({ error: 'Error al obtener visita' });
     }
 });

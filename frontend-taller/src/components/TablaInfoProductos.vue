@@ -1,19 +1,14 @@
 <template>
-    <div class="relative overflow-x-auto shadow-md sm:rounded-lg m-4">
-      <div class="p-4 flex items-center gap-4">
-        <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
-          Productos con Stock Bajo
-        </h3>
-        <div class="flex items-center gap-2">
-          <label class="text-sm text-gray-600">Umbral de stock bajo:</label>
-          <input
-            type="number"
-            v-model="STOCK_BAJO_UMBRAL"
-            @change="cambiarUmbralStockBajo(STOCK_BAJO_UMBRAL)"
-            class="w-20 px-2 py-1 border rounded"
-            min="1"
-          >
-        </div>
+    <div class="w-full">
+      <div class="mb-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <label class="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">Umbral:</label>
+        <input
+          type="number"
+          v-model="STOCK_BAJO_UMBRAL"
+          @change="cambiarUmbralStockBajo(STOCK_BAJO_UMBRAL)"
+          class="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+          min="1"
+        >
       </div>
       <div v-if="isLoading" class="p-4 text-center">
         <div role="status">
@@ -31,37 +26,43 @@
 
       <div v-if="productosPaginados.length > 0" class="overflow-x-auto">
         <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-          <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+          <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 sticky top-0">
             <tr>
-              <th scope="col" class="px-6 py-3 whitespace-nowrap">Nombre</th>
-              <th scope="col" class="px-6 py-3 whitespace-nowrap">Stock</th>
-              <th scope="col" class="px-6 py-3 whitespace-nowrap">Precio Venta</th>
+              <th scope="col" class="px-3 py-2 whitespace-nowrap">Nombre</th>
+              <th scope="col" class="px-3 py-2 text-center whitespace-nowrap">Stock</th>
+              <th scope="col" class="px-3 py-2 text-right whitespace-nowrap">Precio</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="producto in productosPaginados" 
                 :key="producto.id" 
-                class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
-              <td class="px-6 py-4 whitespace-nowrap">{{ producto.nombre }}</td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <span class="text-red-600 font-medium">{{ producto.stock }}</span>
+                class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+              <td class="px-3 py-2.5 font-medium text-gray-900 dark:text-white">{{ producto.nombre }}</td>
+              <td class="px-3 py-2.5 text-center">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                  {{ producto.stock }}
+                </span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap">{{ producto.precioVenta }}</td>
+              <td class="px-3 py-2.5 text-right font-medium text-gray-900 dark:text-white">Bs {{ producto.precioVenta }}</td>
             </tr>
           </tbody>
         </table>
       </div>
-      <div v-else-if="!isLoading" class="p-4 text-center text-gray-500">
-        No hay productos con stock bajo.
+      <div v-else-if="!isLoading" class="py-8 text-center">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+        </svg>
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">No hay productos con stock bajo</p>
       </div>
 
-      <Paginacion
-        v-if="totalItems > 0"
-        :current-page="currentPage"
-        :items-per-page="itemsPerPage"
-        :total-items="totalItems"
-        @cambiar-pagina="cambiarPagina"
-      />
+      <div v-if="totalItems > itemsPerPage" class="mt-4">
+        <Paginacion
+          :current-page="currentPage"
+          :items-per-page="itemsPerPage"
+          :total-items="totalItems"
+          @cambiar-pagina="cambiarPagina"
+        />
+      </div>
     </div>
 </template>
   

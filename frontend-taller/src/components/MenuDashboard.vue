@@ -1,10 +1,10 @@
 <template>
-  <div class="max-w-sm w-full bg-white rounded-lg shadow dark:bg-gray-800 p-4 md:p-6">
-    <div class="flex justify-between items-center mb-4">
-      <h5 class="text-xl font-bold leading-none text-gray-900 dark:text-white">Resumen de Ventas</h5>
+  <div class="w-full">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+      <h5 class="text-lg font-semibold text-gray-900 dark:text-white">Período</h5>
       <select 
         v-model="periodoSeleccionado"
-        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+        class="w-full sm:w-auto bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
       >
         <option value="day">Hoy</option>
         <option value="week">Esta Semana</option>
@@ -13,14 +13,12 @@
       </select>
     </div>
     
-    <div id="salesDonutChart"></div>
+    <div id="salesDonutChart" class="w-full"></div>
     
-    <div class="grid grid-cols-1 items-center border-gray-200 border-t dark:border-gray-700 justify-between mt-5 pt-5">
-      <div class="flex justify-between items-center">
-        <p class="text-sm text-gray-500 dark:text-gray-400">
-          Actualizado: {{ formatDate(lastUpdate) }}
-        </p>
-      </div>
+    <div class="border-t border-gray-200 dark:border-gray-700 mt-4 pt-4">
+      <p class="text-xs text-gray-500 dark:text-gray-400 text-center">
+        Actualizado: {{ formatDate(lastUpdate) }}
+      </p>
     </div>
   </div>
 </template>

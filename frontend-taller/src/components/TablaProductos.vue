@@ -481,13 +481,12 @@ const socket = io(import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001', {
 const formatDate = (date) => {
   if (!date) return '';
   const fechaUTC = new Date(date);
-  const fechaLocal = new Date(fechaUTC.getTime() + fechaUTC.getTimezoneOffset() * 60000);
+  const fechaLocal = new Date(fechaUTC.getTime() - fechaUTC.getTimezoneOffset() * 60000);
   return fechaLocal.toLocaleDateString('es-ES', {
     year: 'numeric',
-    ...producto,
-    fechaAdquisicion: fechaFormateada
-  };
-  showFormModal.value = true;
+    month: 'long',
+    day: 'numeric'
+  });
 };
 
 const openEditModal = (producto) => {

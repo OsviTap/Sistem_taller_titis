@@ -227,23 +227,6 @@ const limpiarFiltros = () => {
   vehiculoIdFilter.value = '';
   
   // Limpiar query params de la URL
-  router.replace({ query: {} });
-  
-  aplicarFiltros();
-};
-
-const cambiarPagina = (page) => {
-  if (page >= 1 && page <= totalPages.value) {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  });
-};
-
-const eliminarVisita = async (id) => {
-  const result = await Swal.fire({
-    title: '¿Estás seguro?',
-    text: "No podrás revertir esto",
     icon: 'warning',
     showCancelButton: true,
     confirmButtonColor: '#3085d6',

@@ -171,16 +171,21 @@ export default {
         
         // Transformar los datos para el formato esperado por la tabla
         const visitas = response.data.data || [];
+        
+        // Mapear correctamente según lo que espera el template
         clientes.value = visitas.map(visita => ({
           id: visita.id,
           clienteId: visita.clienteId,
           vehiculoId: visita.vehiculoId,
-          nombre: visita.Cliente?.nombre || 'Sin nombre',
-          placa: visita.Vehiculo?.placa || 'Sin placa',
-          marca: visita.Vehiculo?.marcaVehiculo?.nombre || 'Sin marca',
-          modelo: visita.Vehiculo?.modeloVehiculo?.nombre || 'Sin modelo',
-          ultimaVisita: visita.fecha,
-          visitaId: visita.id
+          fecha: visita.fecha,
+          visitaId: visita.id,
+          // El template espera Cliente y Vehiculo como objetos
+          Cliente: visita.Cliente || { nombre: 'Sin nombre' },
+          Vehiculo: visita.Vehiculo || { 
+            placa: 'Sin placa',
+            marcaVehiculo: { nombre: 'Sin marca' },
+            modeloVehiculo: { nombre: 'Sin modelo' }
+          }
         }));
       } catch (error) {
         console.error('Error al obtener últimas visitas:', error);

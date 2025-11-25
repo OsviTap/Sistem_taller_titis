@@ -111,34 +111,29 @@ router.get('/totales', async (req, res) => {
                 break;
         }
 
-        const historial = await ProductHistory.findAll({
+        // OPTIMIZACIÓN: Usar agregación SQL en lugar de cargar todo en memoria
+        const totales = await ProductHistory.findOne({
             where: {
                 fechaSalida: {
                     [Op.gte]: fechaInicio
                 }
             },
             attributes: [
-                'precioVenta',
-                'precioCosto',
-                'cantidad',
-                'descuento',
-                'ganancia'
-            ]
+                [sequelize.fn('SUM', sequelize.literal('precioVenta * cantidad')), 'totalVendido'],
+                [sequelize.fn('SUM', sequelize.literal('precioCosto * cantidad')), 'totalCosto'],
+                [sequelize.fn('SUM', sequelize.col('descuento')), 'totalDescuento'],
+                [sequelize.fn('SUM', sequelize.col('ganancia')), 'gananciaTotal']
+            ],
+            raw: true
         });
 
-        const totales = historial.reduce((acc, curr) => ({
-            totalVendido: acc.totalVendido + (parseFloat(curr.precioVenta) * curr.cantidad),
-            totalCosto: acc.totalCosto + (parseFloat(curr.precioCosto) * curr.cantidad),
-            totalDescuento: acc.totalDescuento + (parseFloat(curr.descuento || 0)),
-            gananciaTotal: acc.gananciaTotal + parseFloat(curr.ganancia || 0)
-        }), {
-            totalVendido: 0,
-            totalCosto: 0,
-            totalDescuento: 0,
-            gananciaTotal: 0
+        // Asegurar que los valores no sean null
+        res.json({
+            totalVendido: parseFloat(totales.totalVendido || 0),
+            totalCosto: parseFloat(totales.totalCosto || 0),
+            totalDescuento: parseFloat(totales.totalDescuento || 0),
+            gananciaTotal: parseFloat(totales.gananciaTotal || 0)
         });
-
-        res.json(totales);
     } catch (err) {
         console.error('Error al obtener totales:', err);
         res.status(500).json({ error: 'Error al obtener totales' });

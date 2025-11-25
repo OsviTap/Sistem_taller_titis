@@ -4,19 +4,27 @@ const router = express.Router();
 
 const { Op } = require('sequelize');
 
-// Obtener productos (con búsqueda y límite)
-// Obtener productos (con búsqueda y paginación)
+// Obtener productos (con búsqueda, paginación y filtro de bajo stock)
 router.get('/', async (req, res) => {
     try {
-        const { page = 1, limit = 10, search = '' } = req.query;
+        const { page = 1, limit = 10, search = '', lowStock } = req.query;
         const offset = (page - 1) * limit;
 
         const whereClause = {};
+        
+        // Filtro de búsqueda
         if (search) {
             whereClause[Op.or] = [
                 { nombre: { [Op.like]: `%${search}%` } },
                 { id: { [Op.like]: `%${search}%` } }
             ];
+        }
+        
+        // OPTIMIZACIÓN: Filtro de bajo stock en la base de datos
+        if (lowStock) {
+            whereClause.stock = {
+                [Op.lte]: parseInt(lowStock)
+            };
         }
 
         const { count, rows } = await Producto.findAndCountAll({
@@ -24,7 +32,7 @@ router.get('/', async (req, res) => {
             attributes: ['id', 'nombre', 'stock', 'precioCosto', 'precioVenta', 'fechaAdquisicion'],
             limit: parseInt(limit),
             offset: parseInt(offset),
-            order: [['nombre', 'ASC']]
+            order: [['stock', 'ASC'], ['nombre', 'ASC']] // Ordenar por stock más bajo primero
         });
 
         res.json({

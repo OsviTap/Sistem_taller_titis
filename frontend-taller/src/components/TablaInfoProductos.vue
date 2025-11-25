@@ -110,17 +110,22 @@ const cargarProductosStockBajo = async () => {
   isLoading.value = true;
   error.value = null;
   try {
-    const response = await axios.get('/productos');
+    // OPTIMIZACIÓN: Obtener solo productos con bajo stock del backend
+    const response = await axios.get('/productos', {
+      params: {
+        lowStock: STOCK_BAJO_UMBRAL.value,
+        limit: 100 // Límite razonable para evitar sobrecarga
+      }
+    });
+    
     // El backend devuelve { data, totalItems, totalPages, currentPage }
     const productos = response.data.data || response.data.productos || response.data;
     
     // Asegurarse de que productos sea un array
     const productosArray = Array.isArray(productos) ? productos : [];
     
-    // Filtrar productos con stock bajo
-    todosLosProductos.value = productosArray.filter(
-      producto => producto.stock < STOCK_BAJO_UMBRAL.value
-    );
+    // Los productos ya vienen filtrados del backend
+    todosLosProductos.value = productosArray;
     
     // Actualizar total de items y productos paginados
     totalItems.value = todosLosProductos.value.length;

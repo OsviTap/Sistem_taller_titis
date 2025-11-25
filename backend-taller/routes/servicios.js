@@ -2,14 +2,35 @@ const express = require('express');
 const Servicio = require('../models/Servicio');
 const router = express.Router();
 
-// Obtener todos los servicios
+// Obtener todos los servicios con paginación y búsqueda
 router.get('/', async (req, res) => {
     try {
-        const servicios = await Servicio.findAll({
-            attributes: ['id', 'nombre', 'precio', 'descripcion']
+        const { page = 1, limit = 10, search = '' } = req.query;
+        const offset = (page - 1) * limit;
+        const { Op } = require('sequelize');
+
+        const whereClause = {};
+        if (search) {
+            whereClause[Op.or] = [
+                { nombre: { [Op.like]: `%${search}%` } },
+                { descripcion: { [Op.like]: `%${search}%` } }
+            ];
+        }
+
+        const { count, rows } = await Servicio.findAndCountAll({
+            where: whereClause,
+            attributes: ['id', 'nombre', 'precio', 'descripcion'],
+            limit: parseInt(limit),
+            offset: parseInt(offset),
+            order: [['nombre', 'ASC']]
         });
-        console.log('Servicios encontrados:', JSON.stringify(servicios, null, 2));
-        res.json(servicios);
+
+        res.json({
+            data: rows,
+            totalItems: count,
+            totalPages: Math.ceil(count / limit),
+            currentPage: parseInt(page)
+        });
     } catch (err) {
         console.error('Error al obtener servicios:', err);
         res.status(500).json({ error: 'Error al obtener servicios', details: err.message });

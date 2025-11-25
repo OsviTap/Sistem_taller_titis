@@ -232,7 +232,7 @@
         </svg>
       </button>
     </li>
-    <li v-for="page in totalPages" :key="page">
+    <li v-for="page in pageNumbers" :key="page">
       <button
         @click="goToPage(page)"
         class="flex items-center justify-center text-sm py-2 px-3 leading-tight"
@@ -567,6 +567,13 @@ const filteredProductos = computed(() => productos.value); // Alias for compatib
 const startIndex = computed(() => (currentPage.value - 1) * itemsPerPage.value);
 const endIndex = computed(() => Math.min(startIndex.value + itemsPerPage.value, totalItems.value));
 
+// Computed property para generar el array de páginas de forma segura
+const pageNumbers = computed(() => {
+  const pages = totalPages.value || 1;
+  if (pages <= 0 || pages > 1000) return [1]; // Validación de seguridad
+  return Array.from({ length: pages }, (_, i) => i + 1);
+});
+
 // Agregar funciones de paginación
 const previousPage = () => {
   if (currentPage.value > 1) {
@@ -616,17 +623,20 @@ const fetchProductos = async () => {
     const response = await axios.get('/productos', { params });
     
     if (response.data.productos) {
-      productos.value = response.data.productos;
+      productos.value = response.data.productos || [];
       totalItems.value = response.data.total || 0;
-      totalPages.value = response.data.totalPages || 1;
+      totalPages.value = Math.max(1, response.data.totalPages || 1);
     } else {
-      productos.value = response.data;
-      totalItems.value = response.data.length;
-      totalPages.value = Math.ceil(totalItems.value / itemsPerPage.value);
+      productos.value = Array.isArray(response.data) ? response.data : [];
+      totalItems.value = productos.value.length;
+      totalPages.value = Math.max(1, Math.ceil(totalItems.value / itemsPerPage.value));
     }
   } catch (error) {
     console.error('Error al obtener productos:', error);
     alert('Error al cargar los productos');
+    productos.value = [];
+    totalItems.value = 0;
+    totalPages.value = 1;
   } finally {
     isLoading.value = false;
   }

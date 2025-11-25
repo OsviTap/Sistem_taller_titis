@@ -213,13 +213,25 @@
           </div>
 
           <!-- Footer -->
-          <div class="bg-gray-50 dark:bg-gray-700 px-6 py-4 flex justify-end gap-3">
-            <button @click="irAHistorialCompleto(visitaSeleccionada)" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
-              Ver Historial Completo
-            </button>
-            <button @click="cerrarModalUltimaVisita" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 dark:hover:bg-gray-500 transition-colors">
-              Cerrar
-            </button>
+          <div class="bg-gray-50 dark:bg-gray-700 px-6 py-4 flex justify-between items-center">
+            <div v-if="vehiculoSeleccionado" class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span>Al cerrar, volverás al historial</span>
+            </div>
+            <div v-else class="flex-1"></div>
+            <div class="flex gap-3">
+              <button v-if="!vehiculoSeleccionado" @click="irAHistorialCompleto(visitaSeleccionada)" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                Ver Historial Completo
+              </button>
+              <button @click="cerrarModalUltimaVisita" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 dark:hover:bg-gray-500 transition-colors">
+                {{ vehiculoSeleccionado ? 'Volver al Historial' : 'Cerrar' }}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -300,7 +312,7 @@
                     <div class="flex-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm hover:shadow-md transition-shadow">
                       <div class="p-4">
                         <div class="flex justify-between items-start mb-3">
-                          <div>
+                          <div class="flex-1">
                             <p class="font-semibold text-gray-900 dark:text-white">{{ formatDate(visita.fecha) }}</p>
                             <p class="text-sm text-gray-600 dark:text-gray-400">Km: {{ visita.kilometraje?.toLocaleString() }} → Próximo: {{ visita.proximoCambio?.toLocaleString() }}</p>
                           </div>
@@ -310,19 +322,25 @@
                           </div>
                         </div>
 
-                        <!-- Detalles de la visita -->
-                        <div v-if="visita.detalles && visita.detalles.length > 0" class="mt-3">
-                          <p class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Servicios y Productos:</p>
-                          <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            <div v-for="detalle in visita.detalles" :key="detalle.id" class="flex items-center justify-between text-sm bg-gray-50 dark:bg-gray-600 rounded px-3 py-1.5">
-                              <div class="flex items-center gap-2">
-                                <span :class="detalle.tipo === 'Producto' ? 'bg-blue-500' : 'bg-green-500'" class="w-2 h-2 rounded-full"></span>
-                                <span class="text-gray-700 dark:text-gray-200">{{ detalle.nombre || 'N/A' }}</span>
-                              </div>
-                              <span class="text-gray-600 dark:text-gray-400">x{{ detalle.cantidad }}</span>
-                            </div>
-                          </div>
+                        <!-- Resumen de items -->
+                        <div v-if="visita.detalles && visita.detalles.length > 0" class="mt-3 mb-3">
+                          <p class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            {{ visita.detalles.length }} item(s) - 
+                            <span class="text-blue-600">{{ contarProductos(visita.detalles) }} producto(s)</span>, 
+                            <span class="text-green-600">{{ contarServicios(visita.detalles) }} servicio(s)</span>
+                          </p>
                         </div>
+
+                        <!-- Botón Ver Detalles -->
+                        <button 
+                          @click="verDetallesVisitaHistorial(visita)"
+                          class="w-full mt-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg hover:from-blue-600 hover:to-blue-700 focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-800 transition-all flex items-center justify-center gap-2">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                          </svg>
+                          Ver Detalles Completos
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -456,6 +474,13 @@ export default {
       modalUltimaVisita.value = false;
       detalleVisita.value = null;
       visitaSeleccionada.value = null;
+      // Si hay un vehículo seleccionado, significa que venimos del historial
+      // Podemos volver a abrir el modal de historial
+      if (vehiculoSeleccionado.value) {
+        setTimeout(() => {
+          modalHistorial.value = true;
+        }, 300); // Pequeño delay para transición suave
+      }
     };
 
     const cerrarModalHistorial = () => {
@@ -473,6 +498,36 @@ export default {
           vehiculoId: cliente.vehiculoId
         }
       });
+    };
+
+    const verDetallesVisitaHistorial = async (visita) => {
+      // Cerrar modal de historial y abrir modal de detalle
+      modalHistorial.value = false;
+      visitaSeleccionada.value = {
+        ...visita,
+        Cliente: vehiculoSeleccionado.value?.Cliente,
+        Vehiculo: vehiculoSeleccionado.value?.Vehiculo
+      };
+      modalUltimaVisita.value = true;
+      cargandoDetalle.value = true;
+
+      try {
+        const response = await axios.get(`/visitas/${visita.id}`);
+        detalleVisita.value = response.data;
+      } catch (error) {
+        console.error('Error al obtener detalle de visita:', error);
+        detalleVisita.value = visita; // Usar datos que ya tenemos
+      } finally {
+        cargandoDetalle.value = false;
+      }
+    };
+
+    const contarProductos = (detalles) => {
+      return detalles.filter(d => d.tipo === 'Producto').length;
+    };
+
+    const contarServicios = (detalles) => {
+      return detalles.filter(d => d.tipo === 'Servicio').length;
     };
 
     const prevPage = () => {
@@ -546,7 +601,10 @@ export default {
       cargandoHistorial,
       cerrarModalUltimaVisita,
       cerrarModalHistorial,
-      irAHistorialCompleto
+      irAHistorialCompleto,
+      verDetallesVisitaHistorial,
+      contarProductos,
+      contarServicios
     };
   }
 };

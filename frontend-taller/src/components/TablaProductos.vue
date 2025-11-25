@@ -238,8 +238,15 @@
         </svg>
       </button>
     </li>
-    <li v-for="page in pageNumbers" :key="page">
+    <li v-for="(page, index) in pageNumbers" :key="`page-${index}`">
+      <span
+        v-if="page === '...'"
+        class="flex items-center justify-center text-sm py-2 px-3 leading-tight text-gray-500 bg-white border border-gray-300 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400"
+      >
+        {{ page }}
+      </span>
       <button
+        v-else
         @click="goToPage(page)"
         class="flex items-center justify-center text-sm py-2 px-3 leading-tight"
         :class="{
@@ -527,7 +534,56 @@ const endIndex = computed(() => Math.min(startIndex.value + itemsPerPage.value, 
 const pageNumbers = computed(() => {
   const pages = totalPages.value || 1;
   if (pages <= 0 || pages > 1000) return [1]; // Validación de seguridad
-  return Array.from({ length: pages }, (_, i) => i + 1);
+  
+  // Si hay 7 páginas o menos, mostrar todas
+  if (pages <= 7) {
+    return Array.from({ length: pages }, (_, i) => i + 1);
+  }
+  
+  // Lógica para mostrar páginas con elipsis
+  const current = currentPage.value;
+  const pageArray = [];
+  
+  // Siempre mostrar la primera página
+  pageArray.push(1);
+  
+  // Calcular el rango alrededor de la página actual
+  let startPage = Math.max(2, current - 1);
+  let endPage = Math.min(pages - 1, current + 1);
+  
+  // Ajustar si estamos cerca del inicio
+  if (current <= 3) {
+    startPage = 2;
+    endPage = Math.min(5, pages - 1);
+  }
+  
+  // Ajustar si estamos cerca del final
+  if (current >= pages - 2) {
+    startPage = Math.max(2, pages - 4);
+    endPage = pages - 1;
+  }
+  
+  // Agregar elipsis inicial si es necesario
+  if (startPage > 2) {
+    pageArray.push('...');
+  }
+  
+  // Agregar páginas del rango
+  for (let i = startPage; i <= endPage; i++) {
+    pageArray.push(i);
+  }
+  
+  // Agregar elipsis final si es necesario
+  if (endPage < pages - 1) {
+    pageArray.push('...');
+  }
+  
+  // Siempre mostrar la última página
+  if (pages > 1) {
+    pageArray.push(pages);
+  }
+  
+  return pageArray;
 });
 
 // Agregar funciones de paginación

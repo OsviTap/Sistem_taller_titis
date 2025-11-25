@@ -17,7 +17,8 @@ const ProductHistory = sequelize.define('ProductHistory', {
     },
     nombreProducto: {
         type: DataTypes.STRING,
-        allowNull: true
+        allowNull: true,
+        comment: 'Snapshot del nombre del producto al momento de la venta - protege historial de cambios futuros'
     },
     precioCosto: {
         type: DataTypes.DECIMAL(10, 2),

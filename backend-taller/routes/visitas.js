@@ -127,19 +127,26 @@ router.post('/', async (req, res) => {
         // 2. Crear los detalles y actualizar stock
         if (req.body.detalles && req.body.detalles.length > 0) {
             for (const detalle of req.body.detalles) {
-                let nombreProducto = null;
+                let nombreItem = null;
                 let producto = null;
 
                 // Si es un producto, obtener datos y validar stock antes de crear el detalle
                 if (detalle.tipo === 'Producto') {
                     producto = await Producto.findByPk(detalle.itemId, { transaction: t });
                     if (producto) {
-                        nombreProducto = producto.nombre;
+                        nombreItem = producto.nombre;
                         const nuevoStock = producto.stock - detalle.cantidad;
                         if (nuevoStock < 0) {
                             throw new Error(`Stock insuficiente para el producto ${producto.nombre}`);
                         }
                         await producto.update({ stock: nuevoStock }, { transaction: t });
+                    }
+                } else if (detalle.tipo === 'Servicio') {
+                    // Si es un servicio, obtener su nombre para el snapshot
+                    const { Servicio } = require('../models');
+                    const servicio = await Servicio.findByPk(detalle.itemId, { transaction: t });
+                    if (servicio) {
+                        nombreItem = servicio.nombre;
                     }
                 }
 
@@ -147,7 +154,7 @@ router.post('/', async (req, res) => {
                     visitaId: visita.id,
                     tipo: detalle.tipo,
                     itemId: detalle.itemId,
-                    nombreProducto: nombreProducto, // Guardar snapshot del nombre
+                    nombreProducto: nombreItem, // Guardar snapshot del nombre (producto o servicio)
                     precio: detalle.precio,
                     cantidad: detalle.cantidad || 1,
                     subtotal: detalle.precio * (detalle.cantidad || 1),
@@ -156,7 +163,16 @@ router.post('/', async (req, res) => {
             }
         }
 
-        // 3. Crear el historial de visita
+        // 3. Crear el historial de visita con snapshots
+        const cliente = await Cliente.findByPk(req.body.clienteId, { transaction: t });
+        const vehiculo = await Vehiculo.findByPk(req.body.vehiculoId, { 
+            include: [
+                { model: Marca, as: 'marcaVehiculo' },
+                { model: Modelo, as: 'modeloVehiculo' }
+            ],
+            transaction: t 
+        });
+
         await HistorialVisita.create({
             clienteId: req.body.clienteId,
             vehiculoId: req.body.vehiculoId,
@@ -166,7 +182,12 @@ router.post('/', async (req, res) => {
             proximoCambio: visita.proximoCambio,
             total: visita.total,
             tipoPago: visita.tipoPago,
-            descuento: visita.descuento
+            descuento: visita.descuento,
+            // Snapshots para proteger historial
+            nombreCliente: cliente ? cliente.nombre : null,
+            placaVehiculo: vehiculo ? vehiculo.placa : null,
+            marcaVehiculo: vehiculo && vehiculo.marcaVehiculo ? vehiculo.marcaVehiculo.nombre : null,
+            modeloVehiculo: vehiculo && vehiculo.modeloVehiculo ? vehiculo.modeloVehiculo.nombre : null
         }, { transaction: t });
 
         // 4. Confirmar la transacción

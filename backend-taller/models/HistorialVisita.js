@@ -28,11 +28,32 @@ const HistorialVisita = sequelize.define('HistorialVisita', {
     },
     visitaId: {
         type: DataTypes.INTEGER,
-        allowNull: false,  // Si quieres que sea obligatorio
+        allowNull: false,
         references: {
-            model: 'visitas',  // Asegúrate que este es el nombre correcto de tu tabla
+            model: 'visitas',
             key: 'id'
         }
+    },
+    // SNAPSHOTS: Protegen el historial de cambios futuros
+    nombreCliente: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'Snapshot del nombre del cliente al momento de la visita'
+    },
+    placaVehiculo: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'Snapshot de la placa del vehículo al momento de la visita'
+    },
+    marcaVehiculo: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'Snapshot de la marca del vehículo al momento de la visita'
+    },
+    modeloVehiculo: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'Snapshot del modelo del vehículo al momento de la visita'
     }
 }, { 
     tableName: 'historial_visitas', 

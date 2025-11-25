@@ -20,7 +20,8 @@ const DetalleVisita = sequelize.define('DetalleVisita', {
     },
     nombreProducto: {
         type: DataTypes.STRING,
-        allowNull: true
+        allowNull: true,
+        comment: 'Snapshot del nombre del producto/servicio al momento de la visita'
     },
     precio: {
         type: DataTypes.DECIMAL(10, 2),

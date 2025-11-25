@@ -36,6 +36,12 @@
 
     <!-- Tabla existente -->
     <div class="relative overflow-x-auto shadow-md sm:rounded-lg m-4">
+      <!-- Mensaje cuando no hay productos -->
+      <div v-if="!isLoading && productos.length === 0" class="p-8 text-center">
+        <p class="text-gray-500 dark:text-gray-400">No se encontraron productos</p>
+      </div>
+
+      <!-- Tabla de productos -->
       <div v-if="productos.length > 0" >
         <table  id="filter-table" class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
         <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
@@ -385,56 +391,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Agregar paginación al final de la tabla -->
-    <nav class="flex flex-col md:flex-row justify-between items-center space-y-3 md:space-y-0 p-4">
-      <span class="text-sm font-normal text-gray-500 dark:text-gray-400">
-        Mostrando 
-        <span class="font-semibold text-gray-900 dark:text-white">{{ startIndex + 1 }}-{{ Math.min(endIndex, totalItems) }}</span>
-        de
-        <span class="font-semibold text-gray-900 dark:text-white">{{ totalItems }}</span>
-      </span>
-      <ul class="inline-flex items-stretch -space-x-px">
-        <li>
-          <button
-            @click="previousPage"
-            :disabled="currentPage === 1"
-            class="flex items-center justify-center h-full py-1.5 px-3 ml-0 text-gray-500 bg-white rounded-l-lg border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
-            :class="{ 'opacity-50 cursor-not-allowed': currentPage === 1 }"
-          >
-            <span class="sr-only">Anterior</span>
-            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/>
-            </svg>
-          </button>
-        </li>
-        <li v-for="page in totalPages" :key="page">
-          <button
-            @click="goToPage(page)"
-            class="flex items-center justify-center text-sm py-2 px-3 leading-tight"
-            :class="{
-              'text-blue-600 bg-blue-50 border border-blue-300 hover:bg-blue-100 hover:text-blue-700 dark:border-gray-700 dark:bg-gray-700 dark:text-white': page === currentPage,
-              'text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white': page !== currentPage
-            }"
-          >
-            {{ page }}
-          </button>
-        </li>
-        <li>
-          <button
-            @click="nextPage"
-            :disabled="currentPage === totalPages"
-            class="flex items-center justify-center h-full py-1.5 px-3 leading-tight text-gray-500 bg-white rounded-r-lg border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
-            :class="{ 'opacity-50 cursor-not-allowed': currentPage === totalPages }"
-          >
-            <span class="sr-only">Siguiente</span>
-            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
-            </svg>
-          </button>
-        </li>
-      </ul>
-    </nav>
   </div>
 </template>
 
@@ -622,14 +578,20 @@ const fetchProductos = async () => {
     
     const response = await axios.get('/productos', { params });
     
-    if (response.data.productos) {
-      productos.value = response.data.productos || [];
-      totalItems.value = response.data.total || 0;
+    // El backend devuelve { data, totalItems, totalPages, currentPage }
+    if (response.data.data) {
+      productos.value = response.data.data || [];
+      totalItems.value = response.data.totalItems || 0;
       totalPages.value = Math.max(1, response.data.totalPages || 1);
-    } else {
-      productos.value = Array.isArray(response.data) ? response.data : [];
+    } else if (Array.isArray(response.data)) {
+      // Fallback si el backend devuelve un array directamente
+      productos.value = response.data;
       totalItems.value = productos.value.length;
       totalPages.value = Math.max(1, Math.ceil(totalItems.value / itemsPerPage.value));
+    } else {
+      productos.value = [];
+      totalItems.value = 0;
+      totalPages.value = 1;
     }
   } catch (error) {
     console.error('Error al obtener productos:', error);

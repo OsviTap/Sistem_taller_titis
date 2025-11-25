@@ -226,19 +226,17 @@
       </form>
     </div>
 </template>
-  
+
 <script setup>
-  import { ref, computed, onMounted, onUnmounted ,watch } from 'vue';
-  import axios from '@/api/axios';
-  import jsPDF from 'jspdf';
-  import html2canvas from 'html2canvas';
+import { ref, computed, onMounted, onUnmounted ,watch } from 'vue';
+import axios from '@/api/axios';
+import jsPDF from 'jspdf';
 
-
-  // Referencias para los datos
+// Referencias para los datos
 const clientes = ref([]);
 const vehiculos = ref([]);
 const servicios = ref([]);
-const productos = ref([]);
+const productos = ref([]); // Ahora se llenará dinámicamente
 const detalleServicios = ref([]);
 const detalleProductos = ref([]);
 
@@ -260,9 +258,6 @@ const fechaActual = ref(new Date());
 
 const fechaFormateada = ref(new Date().toISOString().split('T')[0]);
 
-// computed(() => {
-//     return formatDate(fechaActual.value);
-// });
 const formatDate = (dateString) => {
   return new Date(dateString).toLocaleDateString('es-ES', {
     year: 'numeric',
@@ -287,12 +282,8 @@ const cantidadProductoValida = computed(() => {
 
 
 const filteredProductos = computed(() => {
-    if (!productoSearchTerm.value) return [];
-    const searchTerm = productoSearchTerm.value.toLowerCase();
-    return productos.value.filter(producto => 
-        producto.nombre.toLowerCase().includes(searchTerm) ||
-        producto.id.toString().includes(searchTerm)
-    );
+    // Ya no filtramos en cliente, mostramos lo que trajo el backend
+    return productos.value;
 });
 
 const detallesUnificados = computed(() => {
@@ -330,7 +321,45 @@ const handleClickOutside = (event) => {
         showProductosList.value = false;
     }
 };
-// Funciones para cargar datos
+
+// Búsqueda de productos en servidor
+let searchTimeout;
+const buscarProductos = async () => {
+    if (!productoSearchTerm.value || productoSearchTerm.value.length < 2) {
+        productos.value = [];
+        return;
+    }
+
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(async () => {
+        try {
+            const response = await axios.get('/productos', {
+                params: { search: productoSearchTerm.value }
+            });
+            productos.value = response.data.map(producto => ({
+                id: producto.id,
+                nombre: producto.nombre,
+                precio: producto.precioVenta,
+                stock: producto.stock || 0
+            }));
+            showProductosList.value = true;
+        } catch (error) {
+            console.error('Error al buscar productos:', error);
+        }
+    }, 300); // Debounce
+};
+
+// Watch para disparar búsqueda
+watch(productoSearchTerm, (newVal) => {
+    if (productoSeleccionado.value && newVal === productoSeleccionado.value.nombre) {
+        // Si el texto es igual al del producto seleccionado, no buscar
+        return;
+    }
+    buscarProductos();
+});
+
+
+// Funciones para cargar datos iniciales
 const loadData = async () => {
     try {
         // Cargar clientes
@@ -347,15 +376,7 @@ const loadData = async () => {
         }));
         console.log('Servicios cargados:', servicios.value);
 
-        // Cargar productos
-        const productosResponse = await axios.get('/productos');
-        productos.value = productosResponse.data.map(producto => ({
-            id: producto.id,
-            nombre: producto.nombre,
-            precio: producto.precioVenta,
-            stock: producto.stock || 0
-        }));
-        console.log('Productos cargados:', productos.value);
+        // YA NO CARGAMOS TODOS LOS PRODUCTOS AQUÍ
 
     } catch (error) {
         console.error('Error al cargar datos:', error);
@@ -411,6 +432,7 @@ const agregarProducto = () => {
         productoSearchTerm.value = '';
         cantidadProducto.value = 1;
         showProductosList.value = false;
+        productos.value = []; // Limpiar lista de búsqueda
     }
 };
 

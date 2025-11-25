@@ -15,6 +15,10 @@ const ProductHistory = sequelize.define('ProductHistory', {
         type: DataTypes.INTEGER,
         allowNull: false
     },
+    nombreProducto: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
     precioCosto: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false

@@ -1,12 +1,13 @@
 const express = require('express');
-const { ProductHistory, Producto, Cliente, Vehiculo, Marca, Modelo } = require('../models');
+const { ProductHistory, Producto, Cliente, Vehiculo, Marca, Modelo, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const router = express.Router();
 
-// Obtener historial de productos con filtros
+// Obtener historial de productos con filtros y paginación
 router.get('/', async (req, res) => {
     try {
-        const { year, month } = req.query;
+        const { year, month, page = 1, limit = 10 } = req.query;
+        const offset = (page - 1) * limit;
         let whereClause = {};
 
         if (year && month) {
@@ -25,7 +26,7 @@ router.get('/', async (req, res) => {
             };
         }
 
-        const historial = await ProductHistory.findAll({
+        const { count, rows } = await ProductHistory.findAndCountAll({
             where: whereClause,
             include: [
                 {
@@ -52,26 +53,37 @@ router.get('/', async (req, res) => {
                     ]
                 }
             ],
+            limit: parseInt(limit),
+            offset: parseInt(offset),
             order: [['fechaSalida', 'DESC']]
         });
 
-        // Calcular totales
-        const totales = historial.reduce((acc, record) => {
-            acc.totalVendido += parseFloat(record.precioVenta) * record.cantidad;
-            acc.totalCosto += parseFloat(record.precioCosto) * record.cantidad;
-            acc.totalDescuento += parseFloat(record.descuento);
-            acc.gananciaTotal += parseFloat(record.ganancia);
-            return acc;
-        }, {
-            totalVendido: 0,
-            totalCosto: 0,
-            totalDescuento: 0,
-            gananciaTotal: 0
+        // Calcular totales (simplificado para rendimiento)
+        const totalesRaw = await ProductHistory.findAll({
+            where: whereClause,
+            attributes: [
+                [sequelize.fn('SUM', sequelize.literal('precioVenta * cantidad')), 'totalVendido'],
+                [sequelize.fn('SUM', sequelize.literal('precioCosto * cantidad')), 'totalCosto'],
+                [sequelize.fn('SUM', sequelize.col('descuento')), 'totalDescuento'],
+                [sequelize.fn('SUM', sequelize.col('ganancia')), 'gananciaTotal']
+            ]
         });
 
+        const totalesData = totalesRaw[0]?.dataValues || {};
+        
+        const totales = {
+            totalVendido: parseFloat(totalesData.totalVendido || 0),
+            totalCosto: parseFloat(totalesData.totalCosto || 0),
+            totalDescuento: parseFloat(totalesData.totalDescuento || 0),
+            gananciaTotal: parseFloat(totalesData.gananciaTotal || 0)
+        };
+
         res.json({
-            historial,
-            totales
+            historial: rows,
+            totales,
+            totalItems: count,
+            totalPages: Math.ceil(count / limit),
+            currentPage: parseInt(page)
         });
     } catch (error) {
         console.error('Error al obtener historial:', error);
@@ -151,9 +163,14 @@ router.post('/', async (req, res) => {
         // Calcular ganancia
         const ganancia = (precioVenta * cantidad) - (precioCosto * cantidad) - descuento;
 
+        // Obtener nombre del producto para snapshot
+        const producto = await Producto.findByPk(productoId);
+        const nombreProducto = producto ? producto.nombre : null;
+
         const nuevoHistorial = await ProductHistory.create({
             fechaSalida,
             cantidad,
+            nombreProducto, // Snapshot del nombre
             precioCosto,
             precioVenta,
             descuento,
@@ -171,7 +188,7 @@ router.post('/', async (req, res) => {
     }
 });
 
-// Agregar esta nueva ruta para eliminar
+// Eliminar registro del historial
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;

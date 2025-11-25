@@ -24,6 +24,7 @@ const Producto = sequelize.define('Producto', {
     },
 }, {
     timestamps: true,
+    paranoid: true // Habilita soft deletes (agrega columna deletedAt)
 });
 
 module.exports = Producto;

@@ -83,11 +83,25 @@ import axios from '@/api/axios';
 
 export default {
   setup() {
-          cliente.Cliente?.nombre?.toLowerCase().includes(searchTerm) ||
-          cliente.Vehiculo?.placa?.toLowerCase().includes(searchTerm) ||
-          `${cliente.Vehiculo?.marcaVehiculo?.nombre} ${cliente.Vehiculo?.modeloVehiculo?.nombre}`
-            .toLowerCase()
-            .includes(searchTerm)
+    const router = useRouter();
+
+    const searchQuery = ref('');
+    const currentPage = ref(1);
+    const itemsPerPage = ref(10);
+    const clientes = ref([]);
+
+    // Filtro seguro que evita errores con toLowerCase
+    const filteredClientes = computed(() => {
+      const searchTerm = searchQuery.value.toLowerCase();
+
+      return clientes.value.filter(cliente => {
+        return (
+          (cliente.Cliente?.nombre && cliente.Cliente.nombre.toLowerCase().includes(searchTerm)) ||
+          (cliente.Vehiculo?.placa && cliente.Vehiculo.placa.toLowerCase().includes(searchTerm)) ||
+          ((cliente.Vehiculo?.marcaVehiculo?.nombre && cliente.Vehiculo?.modeloVehiculo?.nombre) &&
+            `${cliente.Vehiculo.marcaVehiculo.nombre} ${cliente.Vehiculo.modeloVehiculo.nombre}`
+              .toLowerCase()
+              .includes(searchTerm))
         );
       });
     });
@@ -144,6 +158,17 @@ export default {
       if (currentPage.value < totalPages.value) currentPage.value++;
     };
 
+    // Esta función debe cargar o actualizar la lista de clientes
+    const obtenerUltimasVisitas = async () => {
+      try {
+        // Ejemplo de llamada para obtener clientes; cambia la URL a tu API real
+        const response = await axios.get('/api/ultimas-visitas');
+        clientes.value = response.data.data || [];
+      } catch (error) {
+        console.error('Error al obtener últimas visitas:', error);
+      }
+    };
+
     onMounted(() => {
       obtenerUltimasVisitas();
     });
@@ -152,6 +177,7 @@ export default {
       searchQuery,
       currentPage,
       itemsPerPage,
+      filteredClientes,
       paginatedClientes,
       totalPages,
       formatVehiculo,

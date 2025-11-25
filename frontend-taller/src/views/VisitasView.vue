@@ -369,14 +369,6 @@ const selectProducto = (producto) => {
     showProductosList.value = false; // Cerrar el dropdown después de seleccionar
 };
 
-// Función para cerrar el dropdown de productos al hacer click afuera
-const handleClickOutside = (event) => {
-    const dropdown = document.querySelector('.productos-dropdown');
-    if (dropdown && !dropdown.contains(event.target)) {
-        showProductosList.value = false;
-    }
-};
-
 // Búsqueda de productos en servidor
 let searchTimeout;
 const buscarProductos = async () => {

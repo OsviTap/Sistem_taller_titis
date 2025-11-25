@@ -7,11 +7,31 @@ const { sequelize } = require('../models');
 // Obtener todas las visitas con paginación
 router.get('/', async (req, res) => {
     try {
-        const { page = 1, limit = 10, clienteId, vehiculoId, fechaInicio, fechaFin } = req.query;
+        const { page = 1, limit = 10, search = '', clienteId, vehiculoId, fechaInicio, fechaFin } = req.query;
         const offset = (page - 1) * limit;
         const { Op } = require('sequelize');
 
         const whereClause = {};
+        const includeOptions = [
+            { 
+                model: Cliente,
+                where: search ? {
+                    nombre: { [Op.like]: `%${search}%` }
+                } : undefined,
+                required: search ? true : false
+            },
+            { 
+                model: Vehiculo,
+                where: search ? {
+                    placa: { [Op.like]: `%${search}%` }
+                } : undefined,
+                required: false
+            },
+            { 
+                model: DetalleVisita,
+                as: 'detalles'
+            }
+        ];
 
         if (clienteId) whereClause.clienteId = clienteId;
         if (vehiculoId) whereClause.vehiculoId = vehiculoId;
@@ -32,14 +52,7 @@ router.get('/', async (req, res) => {
 
         const { count, rows } = await Visita.findAndCountAll({
             where: whereClause,
-            include: [
-                { model: Cliente },
-                { model: Vehiculo },
-                { 
-                    model: DetalleVisita,
-                    as: 'detalles'
-                }
-            ],
+            include: includeOptions,
             limit: parseInt(limit),
             offset: parseInt(offset),
             order: [['fecha', 'DESC']],

@@ -2,6 +2,20 @@ const express = require('express');
 const Servicio = require('../models/Servicio');
 const router = express.Router();
 
+// Obtener TODOS los servicios sin paginación (para formularios)
+router.get('/all', async (req, res) => {
+    try {
+        const servicios = await Servicio.findAll({
+            attributes: ['id', 'nombre', 'precio', 'descripcion'],
+            order: [['nombre', 'ASC']]
+        });
+        res.json(servicios);
+    } catch (err) {
+        console.error('Error al obtener todos los servicios:', err);
+        res.status(500).json({ error: 'Error al obtener servicios', details: err.message });
+    }
+});
+
 // Obtener todos los servicios con paginación y búsqueda
 router.get('/', async (req, res) => {
     try {

@@ -8,6 +8,46 @@ const { sequelize } = require('../models');
 const router = express.Router();
 
 // Obtener todos los clientes
+// Obtener TODOS los clientes sin paginación (para formularios)
+router.get('/all', async (req, res) => {
+    try {
+        const { Op } = require('sequelize');
+        const { search = '' } = req.query;
+
+        const whereClause = {
+            estado: 1
+        };
+
+        if (search) {
+            whereClause[Op.or] = [
+                { nombre: { [Op.like]: `%${search}%` } },
+                { telefono: { [Op.like]: `%${search}%` } },
+                { nit: { [Op.like]: `%${search}%` } }
+            ];
+        }
+
+        const clientes = await Cliente.findAll({
+            where: whereClause,
+            include: [{
+                model: Vehiculo,
+                as: 'Vehiculos',
+                where: { estado: 1 },
+                required: false,
+                include: [
+                    { model: Marca, as: 'marcaVehiculo' },
+                    { model: Modelo, as: 'modeloVehiculo' }
+                ]
+            }],
+            order: [['nombre', 'ASC']]
+        });
+
+        res.json(clientes);
+    } catch (error) {
+        console.error('Error al obtener todos los clientes:', error);
+        res.status(500).json({ error: 'Error al obtener clientes' });
+    }
+});
+
 // Obtener todos los clientes con paginación y búsqueda
 router.get('/', async (req, res) => {
     try {

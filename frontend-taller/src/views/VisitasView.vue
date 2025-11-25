@@ -6,15 +6,64 @@
       <!-- Formulario -->
       <form @submit.prevent="guardarVisita">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <!-- Cliente -->
-          <div>
+          <!-- Cliente con Buscador Inteligente -->
+          <div class="relative" ref="clienteDropdownRef">
             <label for="cliente" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Cliente</label>
-            <select v-model="clienteSeleccionado" id="cliente" class="input-select">
-              <option value="">Seleccione un cliente</option>
-              <option v-for="cliente in clientes" :key="cliente.id" :value="cliente.id">
-                {{ cliente.nombre }}
-              </option>
-            </select>
+            <div class="relative">
+              <input 
+                type="text" 
+                v-model="clienteSearchTerm"
+                @input="buscarClientes"
+                @focus="showClientesList = true"
+                placeholder="Buscar cliente por nombre, teléfono o NIT..."
+                class="input-text w-full pr-10"
+              />
+              <svg v-if="clienteSeleccionado" 
+                   @click="limpiarCliente"
+                   class="absolute right-3 top-3 w-5 h-5 text-gray-400 cursor-pointer hover:text-gray-600"
+                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+              <svg v-else
+                   class="absolute right-3 top-3 w-5 h-5 text-gray-400 pointer-events-none"
+                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+              </svg>
+            </div>
+            
+            <!-- Lista desplegable de clientes -->
+            <div v-if="showClientesList && clientesFiltrados.length > 0" 
+                 class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-auto">
+              <div v-for="cliente in clientesFiltrados" 
+                   :key="cliente.id"
+                   @click="seleccionarCliente(cliente)"
+                   class="px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-b-0">
+                <div class="font-medium text-gray-900 dark:text-white">{{ cliente.nombre }}</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">
+                  <span v-if="cliente.telefono">Tel: {{ cliente.telefono }}</span>
+                  <span v-if="cliente.nit" class="ml-3">NIT: {{ cliente.nit }}</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Cliente seleccionado -->
+            <div v-if="clienteSeleccionado && clienteSearchTerm" 
+                 class="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="font-medium text-blue-900 dark:text-blue-100">✓ {{ clienteNombreSeleccionado }}</p>
+                  <p class="text-sm text-blue-700 dark:text-blue-300" v-if="clienteTelefonoSeleccionado">
+                    {{ clienteTelefonoSeleccionado }}
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Sin resultados -->
+            <div v-if="showClientesList && clienteSearchTerm && clientesFiltrados.length === 0"
+                 class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg p-4">
+              <p class="text-gray-500 dark:text-gray-400 text-center">No se encontraron clientes</p>
+            </div>
           </div>
   
           <!-- Vehículo -->
@@ -209,10 +258,10 @@
           <!-- Total -->
           <div class="flex justify-end mt-6 space-x-4">
               <div class="text-right">
-                  <p class="text-gray-600 dark:text-gray-400">Subtotal: Bs {{ subtotal }}</p>
-                  <p class="text-gray-600 dark:text-gray-400">Descuento: Bs {{ descuento }}</p>
+                  <p class="text-gray-600 dark:text-gray-400">Subtotal: Bs {{ subtotal.toFixed(2) }}</p>
+                  <p class="text-gray-600 dark:text-gray-400">Descuento: Bs {{ Number(descuento).toFixed(2) }}</p>
                   <p class="text-lg font-semibold text-gray-800 dark:text-white">
-                      Total: Bs {{ totalConDescuento }}
+                      Total: Bs {{ totalConDescuento.toFixed(2) }}
                   </p>
               </div>
           </div>
@@ -234,6 +283,7 @@ import jsPDF from 'jspdf';
 
 // Referencias para los datos
 const clientes = ref([]);
+const clientesFiltrados = ref([]);
 const vehiculos = ref([]);
 const servicios = ref([]);
 const productos = ref([]); // Ahora se llenará dinámicamente
@@ -242,6 +292,11 @@ const detalleProductos = ref([]);
 
 // Referencias para las selecciones
 const clienteSeleccionado = ref(null);
+const clienteSearchTerm = ref('');
+const clienteNombreSeleccionado = ref('');
+const clienteTelefonoSeleccionado = ref('');
+const showClientesList = ref(false);
+const clienteDropdownRef = ref(null);
 const vehiculoSeleccionado = ref(null);
 const servicioSeleccionado = ref(null);
 const productoSeleccionado = ref(null);
@@ -362,19 +417,16 @@ watch(productoSearchTerm, (newVal) => {
 // Funciones para cargar datos iniciales
 const loadData = async () => {
     try {
-        // Cargar clientes
-        const clientesResponse = await axios.get('/clientes');
-        clientes.value = clientesResponse.data.filter(c => c.estado === 1);
+        // Cargar TODOS los clientes sin paginación
+        const clientesResponse = await axios.get('/clientes/all');
+        clientes.value = clientesResponse.data;
+        clientesFiltrados.value = clientes.value;
+        console.log('Clientes cargados:', clientes.value.length);
 
-        // Cargar servicios
-        const serviciosResponse = await axios.get('/servicios');
-        servicios.value = serviciosResponse.data.map(servicio => ({
-            id: servicio.id,
-            nombre: servicio.nombre,
-            precio: servicio.precio,
-            descripcion: servicio.descripcion
-        }));
-        console.log('Servicios cargados:', servicios.value);
+        // Cargar TODOS los servicios sin paginación
+        const serviciosResponse = await axios.get('/servicios/all');
+        servicios.value = serviciosResponse.data;
+        console.log('Servicios cargados:', servicios.value.length);
 
         // YA NO CARGAMOS TODOS LOS PRODUCTOS AQUÍ
 
@@ -383,6 +435,51 @@ const loadData = async () => {
         if (error.response) {
             console.error('Error del servidor:', error.response.data);
         }
+    }
+};
+
+// Función para buscar clientes
+const buscarClientes = () => {
+    if (!clienteSearchTerm.value.trim()) {
+        clientesFiltrados.value = clientes.value;
+        return;
+    }
+    
+    const term = clienteSearchTerm.value.toLowerCase();
+    clientesFiltrados.value = clientes.value.filter(cliente => 
+        cliente.nombre?.toLowerCase().includes(term) ||
+        cliente.telefono?.toLowerCase().includes(term) ||
+        cliente.nit?.toLowerCase().includes(term)
+    );
+};
+
+// Función para seleccionar un cliente
+const seleccionarCliente = (cliente) => {
+    clienteSeleccionado.value = cliente.id;
+    clienteSearchTerm.value = cliente.nombre;
+    clienteNombreSeleccionado.value = cliente.nombre;
+    clienteTelefonoSeleccionado.value = cliente.telefono;
+    showClientesList.value = false;
+};
+
+// Función para limpiar selección de cliente
+const limpiarCliente = () => {
+    clienteSeleccionado.value = null;
+    clienteSearchTerm.value = '';
+    clienteNombreSeleccionado.value = '';
+    clienteTelefonoSeleccionado.value = '';
+    vehiculoSeleccionado.value = null;
+    vehiculos.value = [];
+    showClientesList.value = false;
+};
+
+// Cerrar dropdown al hacer clic fuera
+const handleClickOutside = (event) => {
+    if (clienteDropdownRef.value && !clienteDropdownRef.value.contains(event.target)) {
+        showClientesList.value = false;
+    }
+    if (productoDropdownRef.value && !productoDropdownRef.value.contains(event.target)) {
+        showProductosList.value = false;
     }
 };
 
@@ -448,12 +545,17 @@ const eliminarDetalle = (index, tipo) => {
 // Función para guardar la visita
 const guardarVisita = async () => {
     try {
-        // Obtener datos del cliente y vehículo
-        const clienteResponse = await axios.get(`/clientes/${clienteSeleccionado.value}`);
-        const vehiculoResponse = await axios.get(`/vehiculos/cliente/${clienteSeleccionado.value}`);
+        // Validar formulario
+        if (!validarFormulario()) {
+            alert('Por favor, complete todos los campos requeridos');
+            return;
+        }
+
+        // Obtener datos del cliente desde la memoria (ya los tenemos cargados)
+        const clienteData = clientes.value.find(c => c.id === clienteSeleccionado.value);
         
-        const clienteData = clienteResponse.data;
-        const vehiculoData = vehiculoResponse.data.find(v => v.id === vehiculoSeleccionado.value);
+        // Obtener datos del vehículo desde la memoria (ya los tenemos cargados)
+        const vehiculoData = vehiculos.value.find(v => v.id === vehiculoSeleccionado.value);
 
         if (!clienteData || !vehiculoData) {
             throw new Error('No se encontraron los datos del cliente o vehículo');
@@ -617,12 +719,18 @@ const generarPDF = async (visitaData, clienteData, vehiculoData, detallesComplet
             doc.setFont('helvetica', 'normal');
 
             // Detalles
-            detallesCompletos.forEach(item => {
-                doc.text(item.id.toString(), 15, currentY);
-                doc.text(item.nombre, 45, currentY);
-                doc.text(item.cantidad.toString(), 120, currentY);
-                doc.text(item.precio.toFixed(2), 140, currentY);
-                doc.text((item.precio * item.cantidad).toFixed(2), 170, currentY);
+            detallesCompletos.forEach((item, index) => {
+                // Verificar si necesitamos una nueva página
+                if (currentY > 250) {
+                    doc.addPage();
+                    currentY = 20;
+                }
+                
+                doc.text((index + 1).toString(), 15, currentY);
+                doc.text(item.nombre.substring(0, 35), 45, currentY); // Limitar largo del nombre
+                doc.text(item.cantidad.toString(), 125, currentY, { align: 'center' });
+                doc.text(`Bs ${item.precio.toFixed(2)}`, 155, currentY, { align: 'right' });
+                doc.text(`Bs ${(item.precio * item.cantidad).toFixed(2)}`, 195, currentY, { align: 'right' });
                 currentY += 10;
             });
 
@@ -630,22 +738,92 @@ const generarPDF = async (visitaData, clienteData, vehiculoData, detallesComplet
             currentY += 10;
             const lineWidth = 190;
             doc.setDrawColor(200, 200, 200);
-            doc.line(10, currentY - 5, lineWidth, currentY - 5);
+            doc.line(10, currentY - 5, 10 + lineWidth, currentY - 5);
 
             if (visitaData.descuento > 0) {
-                doc.text(`Subtotal: ${visitaData.total + visitaData.descuento}`, 150, currentY);
+                const subtotalSinDescuento = visitaData.total + visitaData.descuento;
+                doc.text(`Subtotal: Bs ${subtotalSinDescuento.toFixed(2)}`, 150, currentY);
                 currentY += 10;
-                doc.text(`Descuento: ${visitaData.descuento}`, 150, currentY);
+                doc.text(`Descuento: Bs ${visitaData.descuento.toFixed(2)}`, 150, currentY);
                 currentY += 10;
             }
             doc.setFont('helvetica', 'bold');
-            doc.text(`TOTAL: ${visitaData.total}`, 150, currentY);
+            doc.setFontSize(12);
+            doc.text(`TOTAL: Bs ${visitaData.total.toFixed(2)}`, 150, currentY);
 
             resolve(doc);
         };
 
         img.onerror = reject;
     });
+};
+
+// Función para generar documento PDF sin guardar (Botón Imprimir)
+const generarDocumento = async () => {
+    try {
+        // Validar formulario
+        if (!validarFormulario()) {
+            alert('Por favor, complete todos los campos requeridos antes de generar el documento');
+            return;
+        }
+
+        // Obtener datos del cliente desde la memoria
+        const clienteData = clientes.value.find(c => c.id === clienteSeleccionado.value);
+        
+        // Obtener datos del vehículo desde la memoria
+        const vehiculoData = vehiculos.value.find(v => v.id === vehiculoSeleccionado.value);
+
+        if (!clienteData || !vehiculoData) {
+            throw new Error('No se encontraron los datos del cliente o vehículo');
+        }
+
+        // Preparar datos de la visita para el PDF
+        const visitaData = {
+            clienteId: clienteSeleccionado.value,
+            vehiculoId: vehiculoSeleccionado.value,
+            fecha: new Date(fechaFormateada.value),
+            kilometraje: kilometraje.value,
+            proximoCambio: proximoCambio.value,
+            tipoPago: tipoPago.value,
+            descuento: Number(descuento.value) || 0,
+            total: totalConDescuento.value
+        };
+
+        // Preparar detalles completos para el PDF
+        const detallesCompletos = [
+            ...detalleServicios.value.map(servicio => ({
+                id: servicio.id,
+                nombre: servicio.nombre,
+                precio: servicio.precio,
+                cantidad: servicio.cantidad
+            })),
+            ...detalleProductos.value.map(producto => ({
+                id: producto.id,
+                nombre: producto.nombre,
+                precio: producto.precio,
+                cantidad: producto.cantidad
+            }))
+        ];
+
+        // Generar PDF
+        const doc = await generarPDF(visitaData, clienteData, vehiculoData, detallesCompletos);
+        
+        // Abrir PDF en nueva ventana
+        const pdfBlob = doc.output('blob');
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+        window.open(pdfUrl, '_blank');
+
+        // Descargar PDF
+        const nombreCliente = clienteData.nombre.replace(/\s+/g, '_');
+        const fechaVisita = new Date(visitaData.fecha).toLocaleDateString('es-ES').replace(/\//g, '-');
+        const nombreArchivo = `Proforma_${nombreCliente}_${fechaVisita}.pdf`;
+        doc.save(nombreArchivo);
+
+        console.log('Documento generado exitosamente');
+    } catch (error) {
+        console.error('Error al generar documento:', error);
+        alert('Error al generar el documento. Por favor, verifique los datos.');
+    }
 };
 
 // Funciones auxiliares
@@ -662,12 +840,21 @@ const validarFormulario = () => {
 
 const resetearFormulario = () => {
     clienteSeleccionado.value = null;
+    clienteSearchTerm.value = '';
+    clienteNombreSeleccionado.value = '';
+    clienteTelefonoSeleccionado.value = '';
     vehiculoSeleccionado.value = null;
+    vehiculos.value = [];
     kilometraje.value = 0;
     proximoCambio.value = 0;
     tipoPago.value = 'Efectivo';
+    descuento.value = 0;
     detalleServicios.value = [];
     detalleProductos.value = [];
+    productos.value = [];
+    productoSearchTerm.value = '';
+    showClientesList.value = false;
+    showProductosList.value = false;
 };
 
 // Inicialización
@@ -678,6 +865,14 @@ onMounted(() => {
 
 onUnmounted(() => {
     document.removeEventListener('click', handleClickOutside);
+});
+
+// Watch para limpiar vehículos cuando se limpia el cliente
+watch(clienteSeleccionado, (newValue) => {
+    if (!newValue) {
+        vehiculoSeleccionado.value = null;
+        vehiculos.value = [];
+    }
 });
 
 //export { generarPDF, guardarVisita };

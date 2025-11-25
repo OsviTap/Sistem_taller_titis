@@ -12,8 +12,7 @@
           <!-- Filtro de período -->
           <select 
             v-model="periodoSeleccionado" 
-            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-          >
+            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
             <option value="mensual">Mensual</option>
             <option value="anual">Anual</option>
           </select>
@@ -22,15 +21,13 @@
             type="month" 
             v-if="periodoSeleccionado === 'mensual'"
             v-model="fechaSeleccionada"
-            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-          >
+            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
           <input 
             type="number" 
             v-else
             v-model="yearSeleccionado"
             placeholder="Año"
-            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-          >
+            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
         </div>
       </div>
 
@@ -53,7 +50,7 @@
           <tbody>
             <tr v-for="registro in historialPaginado" :key="registro.id" class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
               <td class="px-6 py-4">{{ formatDate(registro.fechaSalida) }}</td>
-              <td class="px-6 py-4">{{ registro.Producto.nombre }}</td>
+              <td class="px-6 py-4">{{ registro.nombreProducto || registro.Producto?.nombre }}</td>
               <td class="px-6 py-4">{{ registro.Cliente.nombre }}</td>
               <td class="px-6 py-4">
                 {{
@@ -79,7 +76,7 @@
             a
             <span class="font-semibold text-gray-900 dark:text-white">{{ paginaFin }}</span>
             de
-            <span class="font-semibold text-gray-900 dark:text-white">{{ historial.length }}</span>
+            <span class="font-semibold text-gray-900 dark:text-white">{{ totalItems }}</span>
             resultados
           </span>
         </div>
@@ -87,8 +84,7 @@
           <button
             @click="cambiarPagina(paginaActual - 1)"
             :disabled="paginaActual === 1"
-            class="px-3 py-1 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-          >
+            class="px-3 py-1 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed">
             Anterior
           </button>
           <button
@@ -98,15 +94,13 @@
             :class="[
               'px-3 py-1 border rounded-md',
               paginaActual === pagina ? 'bg-blue-500 text-white' : 'bg-white text-gray-700'
-            ]"
-          >
+            ]">
             {{ pagina }}
           </button>
           <button
             @click="cambiarPagina(paginaActual + 1)"
             :disabled="paginaActual === totalPaginas"
-            class="px-3 py-1 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-          >
+            class="px-3 py-1 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed">
             Siguiente
           </button>
         </div>
@@ -158,51 +152,64 @@ const totales = ref({
   gananciaTotal: 0
 });
 
-// Paginación
-const itemsPorPagina = 10;
+// Paginación del servidor
+const itemsPorPagina = ref(10);
 const paginaActual = ref(1);
+const totalItems = ref(0);
+const totalPaginasServer = ref(0);
+const isLoading = ref(false);
 
 // Computed properties para la paginación
-const totalPaginas = computed(() => Math.ceil(historial.value.length / itemsPorPagina));
-const paginaInicio = computed(() => ((paginaActual.value - 1) * itemsPorPagina) + 1);
-const paginaFin = computed(() => Math.min(paginaActual.value * itemsPorPagina, historial.value.length));
+const totalPaginas = computed(() => totalPaginasServer.value);
+const paginaInicio = computed(() => ((paginaActual.value - 1) * itemsPorPagina.value) + 1);
+const paginaFin = computed(() => Math.min(paginaActual.value * itemsPorPagina.value, totalItems.value));
 
-const historialPaginado = computed(() => {
-  const inicio = (paginaActual.value - 1) * itemsPorPagina;
-  const fin = inicio + itemsPorPagina;
-  return historial.value.slice(inicio, fin);
-});
+// Ya no necesitamos paginación del cliente, usamos los datos directos del servidor
+const historialPaginado = computed(() => historial.value);
 
 // Función para cambiar de página
 const cambiarPagina = (pagina) => {
   if (pagina >= 1 && pagina <= totalPaginas.value) {
     paginaActual.value = pagina;
+    cargarHistorial();
   }
 };
 
-// Cargar datos del historial
+// Cargar datos del historial con paginación del servidor
 const cargarHistorial = async () => {
+  isLoading.value = true;
   try {
-    let params = {};
+    let params = {
+      page: paginaActual.value,
+      limit: itemsPorPagina.value
+    };
+    
     if (periodoSeleccionado.value === 'mensual' && fechaSeleccionada.value) {
       const [year, month] = fechaSeleccionada.value.split('-');
-      params = { year, month };
+      params.year = year;
+      params.month = month;
     } else if (periodoSeleccionado.value === 'anual' && yearSeleccionado.value) {
-      params = { year: yearSeleccionado.value };
+      params.year = yearSeleccionado.value;
     }
 
     const response = await axios.get('/historial-productos', { params });
+    
+    // Manejar la nueva estructura de respuesta paginada
     historial.value = response.data.historial;
     totales.value = response.data.totales;
-    // Reset a la primera página cuando se cargan nuevos datos
-    paginaActual.value = 1;
+    totalItems.value = response.data.totalItems || 0;
+    totalPaginasServer.value = response.data.totalPages || 0;
+    
   } catch (error) {
     console.error('Error al cargar historial:', error);
+  } finally {
+    isLoading.value = false;
   }
 };
 
-// Observar cambios en los filtros
+// Observar cambios en los filtros - resetear a página 1
 watch([periodoSeleccionado, fechaSeleccionada, yearSeleccionado], () => {
+  paginaActual.value = 1;
   cargarHistorial();
 });
 
@@ -214,9 +221,19 @@ const formatCurrency = (amount) => {
   }).format(amount || 0);
 };
 
-// Formatear fecha
+// Formatear fecha (corregido para evitar problemas de timezone)
 const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleDateString('es-BO', {
+  if (!dateString) return '';
+  
+  // Crear fecha desde el string sin conversión de timezone
+  // Esto asegura que si la fecha es "2024-11-24", se muestre como 24 de noviembre
+  const date = new Date(dateString);
+  
+  // Ajustar por el offset de timezone para obtener la fecha "local" correcta
+  const userTimezoneOffset = date.getTimezoneOffset() * 60000;
+  const localDate = new Date(date.getTime() + userTimezoneOffset);
+  
+  return localDate.toLocaleDateString('es-BO', {
     year: 'numeric',
     month: 'long',
     day: 'numeric'

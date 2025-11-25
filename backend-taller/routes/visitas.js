@@ -4,9 +4,34 @@ const router = express.Router();
 const { sequelize } = require('../models');
 
 // Obtener todas las visitas
+// Obtener todas las visitas con paginación
 router.get('/', async (req, res) => {
     try {
-        const visitas = await Visita.findAll({
+        const { page = 1, limit = 10, clienteId, vehiculoId, fechaInicio, fechaFin } = req.query;
+        const offset = (page - 1) * limit;
+        const { Op } = require('sequelize');
+
+        const whereClause = {};
+
+        if (clienteId) whereClause.clienteId = clienteId;
+        if (vehiculoId) whereClause.vehiculoId = vehiculoId;
+        
+        if (fechaInicio && fechaFin) {
+            whereClause.fecha = {
+                [Op.between]: [new Date(fechaInicio), new Date(fechaFin)]
+            };
+        } else if (fechaInicio) {
+            whereClause.fecha = {
+                [Op.gte]: new Date(fechaInicio)
+            };
+        } else if (fechaFin) {
+            whereClause.fecha = {
+                [Op.lte]: new Date(fechaFin)
+            };
+        }
+
+        const { count, rows } = await Visita.findAndCountAll({
+            where: whereClause,
             include: [
                 { model: Cliente },
                 { model: Vehiculo },
@@ -15,9 +40,18 @@ router.get('/', async (req, res) => {
                     as: 'detalles'
                 }
             ],
-            order: [['fecha', 'DESC']]
+            limit: parseInt(limit),
+            offset: parseInt(offset),
+            order: [['fecha', 'DESC']],
+            distinct: true
         });
-        res.json(visitas);
+
+        res.json({
+            data: rows,
+            totalItems: count,
+            totalPages: Math.ceil(count / limit),
+            currentPage: parseInt(page)
+        });
     } catch (error) {
         console.error('Error al obtener visitas:', error);
         res.status(500).json({ error: 'Error al obtener visitas' });
@@ -44,20 +78,14 @@ router.post('/', async (req, res) => {
         // 2. Crear los detalles y actualizar stock
         if (req.body.detalles && req.body.detalles.length > 0) {
             for (const detalle of req.body.detalles) {
-                await DetalleVisita.create({
-                    visitaId: visita.id,
-                    tipo: detalle.tipo,
-                    itemId: detalle.itemId,
-                    precio: detalle.precio,
-                    cantidad: detalle.cantidad || 1,
-                    subtotal: detalle.precio * (detalle.cantidad || 1),
-                    estado: 1
-                }, { transaction: t });
+                let nombreProducto = null;
+                let producto = null;
 
-                // Si es un producto, actualizar el stock
+                // Si es un producto, obtener datos y validar stock antes de crear el detalle
                 if (detalle.tipo === 'Producto') {
-                    const producto = await Producto.findByPk(detalle.itemId, { transaction: t });
+                    producto = await Producto.findByPk(detalle.itemId, { transaction: t });
                     if (producto) {
+                        nombreProducto = producto.nombre;
                         const nuevoStock = producto.stock - detalle.cantidad;
                         if (nuevoStock < 0) {
                             throw new Error(`Stock insuficiente para el producto ${producto.nombre}`);
@@ -65,6 +93,17 @@ router.post('/', async (req, res) => {
                         await producto.update({ stock: nuevoStock }, { transaction: t });
                     }
                 }
+
+                await DetalleVisita.create({
+                    visitaId: visita.id,
+                    tipo: detalle.tipo,
+                    itemId: detalle.itemId,
+                    nombreProducto: nombreProducto, // Guardar snapshot del nombre
+                    precio: detalle.precio,
+                    cantidad: detalle.cantidad || 1,
+                    subtotal: detalle.precio * (detalle.cantidad || 1),
+                    estado: 1
+                }, { transaction: t });
             }
         }
 

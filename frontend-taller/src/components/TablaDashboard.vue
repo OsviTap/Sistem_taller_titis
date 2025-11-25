@@ -83,35 +83,6 @@ import axios from '@/api/axios';
 
 export default {
   setup() {
-    const router = useRouter();
-    const clientes = ref([]);
-    const searchQuery = ref('');
-    const currentPage = ref(1);
-    const itemsPerPage = ref(10);
-
-    // Obtener últimas visitas por cliente/vehículo
-    const obtenerUltimasVisitas = async () => {
-      try {
-        const response = await axios.get('/historiales');
-        // Agrupar por cliente y vehículo para obtener solo últimas visitas
-        const visitasAgrupadas = response.data.reduce((acc, visita) => {
-          const key = `${visita.clienteId}-${visita.vehiculoId}`;
-          if (!acc[key] || new Date(visita.fecha) > new Date(acc[key].fecha)) {
-            acc[key] = visita;
-          }
-          return acc;
-        }, {});
-        
-        clientes.value = Object.values(visitasAgrupadas);
-      } catch (error) {
-        console.error('Error al obtener visitas:', error);
-      }
-    };
-
-    const filteredClientes = computed(() => {
-      return clientes.value.filter(cliente => {
-        const searchTerm = searchQuery.value.toLowerCase();
-        return (
           cliente.Cliente?.nombre?.toLowerCase().includes(searchTerm) ||
           cliente.Vehiculo?.placa?.toLowerCase().includes(searchTerm) ||
           `${cliente.Vehiculo?.marcaVehiculo?.nombre} ${cliente.Vehiculo?.modeloVehiculo?.nombre}`

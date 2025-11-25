@@ -135,9 +135,9 @@
       <nav class="flex flex-col md:flex-row justify-between items-center space-y-3 md:space-y-0 p-4">
         <span class="text-sm font-normal text-gray-500 dark:text-gray-400">
           Mostrando 
-          <span class="font-semibold text-gray-900 dark:text-white">{{ startIndex + 1 }}-{{ Math.min(endIndex, filteredClientes.length) }}</span>
+          <span class="font-semibold text-gray-900 dark:text-white">{{ startIndex + 1 }}-{{ Math.min(endIndex, totalItems) }}</span>
           de
-          <span class="font-semibold text-gray-900 dark:text-white">{{ filteredClientes.length }}</span>
+          <span class="font-semibold text-gray-900 dark:text-white">{{ totalItems }}</span>
         </span>
         <ul class="inline-flex items-stretch -space-x-px">
           <li>
@@ -356,10 +356,13 @@ const modalMode = ref('create');
 const clientes = ref([]);
 const searchTerm = ref('');
 const currentPage = ref(1);
-const itemsPerPage = ref(5);
+const itemsPerPage = ref(10); // Default to 10
+const totalItems = ref(0);
+const totalPages = ref(0);
 const sortColumn = ref('nombre');
 const sortDirection = ref('asc');
 const selectedClienteId = ref(null);
+const isLoading = ref(false);
 
 const marcas = ref([]);
 const modelosPorMarca = ref([]);
@@ -439,64 +442,70 @@ const removeVehicle = (index) => {
 };
 
 // Computed properties
-const filteredClientes = computed(() => {
-  if (!searchTerm.value) return clientes.value;
-  
-  const searchLower = searchTerm.value.toLowerCase();
-  return clientes.value.filter(cliente => 
-    cliente.nombre?.toLowerCase().includes(searchLower) ||
-    cliente.direccion?.toLowerCase().includes(searchLower) ||
-    cliente.telefono?.toString().includes(searchLower) ||
-    cliente.nit?.toString().includes(searchLower)
-  );
-});
-
-const sortedClientes = computed(() => {
-  return [...filteredClientes.value].sort((a, b) => {
-    const aValue = a[sortColumn.value];
-    const bValue = b[sortColumn.value];
-    
-    if (sortDirection.value === 'asc') {
-      return aValue > bValue ? 1 : -1;
-    } else {
-      return aValue < bValue ? 1 : -1;
-    }
-  });
-});
+// Ya no filtramos en cliente, usamos los datos directos del servidor
+const paginatedAndFilteredClientes = computed(() => clientes.value);
 
 const startIndex = computed(() => (currentPage.value - 1) * itemsPerPage.value);
-const endIndex = computed(() => startIndex.value + itemsPerPage.value);
-
-const paginatedAndFilteredClientes = computed(() => 
-  sortedClientes.value.slice(startIndex.value, endIndex.value)
-);
-
-const totalPages = computed(() => 
-  Math.ceil(filteredClientes.value.length / itemsPerPage.value)
-);
+const endIndex = computed(() => Math.min(startIndex.value + itemsPerPage.value, totalItems.value));
 
 // Métodos
+let abortController = null;
+
 const loadClientes = async () => {
+    // Cancelar petición anterior si existe
+    if (abortController) {
+        abortController.abort();
+    }
+    
+    const myController = new AbortController();
+    abortController = myController;
+
+    isLoading.value = true;
     try {
-        const response = await axios.get('/clientes');
-        clientes.value = response.data
-            .filter(cliente => cliente.estado === 1) // Solo mostrar clientes activos
-            .map(cliente => ({
-                ...cliente,
-                vehiculos: cliente.Vehiculos?.map(v => ({
-                    ...v,
-                    marca: v.marcaVehiculo?.nombre || '',
-                    modelo: v.modeloVehiculo?.nombre || '',
-                    marcaId: v.marcaId,
-                    modeloId: v.modeloId,
-                    placa: v.placa || ''
-                })) || []
-            }));
+        const response = await axios.get('/clientes', {
+            params: {
+                page: currentPage.value,
+                limit: itemsPerPage.value,
+                search: searchTerm.value
+            },
+            signal: myController.signal
+        });
+        
+        // Manejar la nueva estructura de respuesta paginada
+        const { data, totalItems: total, totalPages: pages } = response.data;
+        
+        clientes.value = data.map(cliente => ({
+            ...cliente,
+            vehiculos: cliente.Vehiculos?.map(v => ({
+                ...v,
+                marca: v.marcaVehiculo?.nombre || '',
+                modelo: v.modeloVehiculo?.nombre || '',
+                marcaId: v.marcaId,
+                modeloId: v.modeloId,
+                placa: v.placa || ''
+            })) || []
+        }));
+        
+        totalItems.value = total;
+        totalPages.value = pages;
+        
     } catch (error) {
+        if (axios.isCancel(error)) {
+            console.log('Petición cancelada');
+            return;
+        }
         console.error('Error al cargar clientes:', error);
+    } finally {
+        // Solo desactivar loading si esta es la petición activa
+        if (abortController === myController) {
+            isLoading.value = false;
+        }
     }
 };
+
 const sortBy = (column) => {
+  // Por ahora el ordenamiento es solo visual en la página actual o requeriría backend sort
+  // Implementaremos sort básico en backend si es necesario, pero por ahora solo UI
   if (sortColumn.value === column) {
     sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc';
   } else {
@@ -508,17 +517,20 @@ const sortBy = (column) => {
 const previousPage = () => {
   if (currentPage.value > 1) {
     currentPage.value--;
+    loadClientes();
   }
 };
 
 const nextPage = () => {
   if (currentPage.value < totalPages.value) {
     currentPage.value++;
+    loadClientes();
   }
 };
 
 const goToPage = (page) => {
   currentPage.value = page;
+  loadClientes();
 };
 
 // Métodos del modal
@@ -692,9 +704,16 @@ const deleteCliente = async (cliente) => {
 };
 
 // Watch para resetear la página cuando cambia la búsqueda
-watch(searchTerm, () => {
-  currentPage.value = 1;
+// Debounce para la búsqueda podría ser útil, pero por ahora simple
+let searchTimeout;
+watch(searchTerm, (newVal) => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        currentPage.value = 1;
+        loadClientes();
+    }, 500); // 500ms delay
 });
+
 // Agregar este watch para vigilar cambios en las marcas de los vehículos
 watch(
     () => formData.value.vehiculos,
@@ -707,9 +726,11 @@ watch(
     },
     { deep: true }
 );
-// Watch para resetear la página cuando cambia items por página
+
+// Watch para recargar cuando cambia items por página
 watch(itemsPerPage, () => {
   currentPage.value = 1;
+  loadClientes();
 });
 
 // Cargar datos al montar el componente

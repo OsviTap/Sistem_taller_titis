@@ -7,24 +7,49 @@ const { sequelize } = require('../models');
 const router = express.Router();
 
 // Obtener todos los clientes
+// Obtener todos los clientes con paginación y búsqueda
 router.get('/', async (req, res) => {
     try {
-        const clientes = await Cliente.findAll({
-            where: {
-                estado: 1 // Solo traer clientes activos
-            },
+        const { page = 1, limit = 10, search = '' } = req.query;
+        const offset = (page - 1) * limit;
+        const { Op } = require('sequelize');
+
+        const whereClause = {
+            estado: 1 // Solo traer clientes activos
+        };
+
+        if (search) {
+            whereClause[Op.or] = [
+                { nombre: { [Op.like]: `%${search}%` } },
+                { telefono: { [Op.like]: `%${search}%` } },
+                { nit: { [Op.like]: `%${search}%` } }
+            ];
+        }
+
+        const { count, rows } = await Cliente.findAndCountAll({
+            where: whereClause,
             include: [{
                 model: Vehiculo,
                 as: 'Vehiculos',
-                where: { estado: 1 }, // Solo traer vehículos activos
+                where: { estado: 1 },
                 required: false,
                 include: [
                     { model: Marca, as: 'marcaVehiculo' },
                     { model: Modelo, as: 'modeloVehiculo' }
                 ]
-            }]
+            }],
+            limit: parseInt(limit),
+            offset: parseInt(offset),
+            order: [['createdAt', 'DESC']],
+            distinct: true // Importante para contar correctamente con includes
         });
-        res.json(clientes);
+
+        res.json({
+            data: rows,
+            totalItems: count,
+            totalPages: Math.ceil(count / limit),
+            currentPage: parseInt(page)
+        });
     } catch (error) {
         console.error('Error al obtener clientes:', error);
         res.status(500).json({ error: 'Error al obtener clientes' });

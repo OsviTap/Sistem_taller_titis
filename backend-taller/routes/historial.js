@@ -94,7 +94,19 @@ router.post('/', async (req, res) => {
 });
 router.get('/', async (req, res) => {
     try {
-        const historial = await HistorialVisita.findAll({
+        const { page = 1, limit = 10, search = '' } = req.query;
+        const offset = (page - 1) * limit;
+
+        const whereClause = {};
+        if (search) {
+            whereClause[Sequelize.Op.or] = [
+                { '$Cliente.nombre$': { [Sequelize.Op.like]: `%${search}%` } },
+                { '$Vehiculo.placa$': { [Sequelize.Op.like]: `%${search}%` } }
+            ];
+        }
+
+        const { count, rows } = await HistorialVisita.findAndCountAll({
+            where: whereClause,
             include: [
                 {
                     model: Cliente,
@@ -145,11 +157,14 @@ router.get('/', async (req, res) => {
                     ]
                 }
             ],
-            order: [['fecha', 'DESC']]
+            order: [['fecha', 'DESC']],
+            limit: parseInt(limit),
+            offset: parseInt(offset),
+            distinct: true // Important for correct count with includes
         });
 
         // Transformar la respuesta para mantener la estructura original
-        const transformedHistorial = historial.map(item => {
+        const transformedHistorial = rows.map(item => {
             const plainItem = item.get({ plain: true });
             return {
                 ...plainItem,
@@ -157,7 +172,12 @@ router.get('/', async (req, res) => {
             };
         });
 
-        res.json(transformedHistorial);
+        res.json({
+            total: count,
+            totalPages: Math.ceil(count / limit),
+            currentPage: parseInt(page),
+            data: transformedHistorial
+        });
     } catch (err) {
         console.error('Error al obtener historial:', err);
         res.status(500).json({ error: 'Error al obtener historial', details: err.message });

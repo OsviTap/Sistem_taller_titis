@@ -161,11 +161,30 @@ export default {
     // Esta función debe cargar o actualizar la lista de clientes
     const obtenerUltimasVisitas = async () => {
       try {
-        // Ejemplo de llamada para obtener clientes; cambia la URL a tu API real
-        const response = await axios.get('/api/ultimas-visitas');
-        clientes.value = response.data.data || [];
+        // Obtener las últimas 10 visitas ordenadas por fecha descendente
+        const response = await axios.get('/visitas', {
+          params: {
+            page: 1,
+            limit: 10
+          }
+        });
+        
+        // Transformar los datos para el formato esperado por la tabla
+        const visitas = response.data.data || [];
+        clientes.value = visitas.map(visita => ({
+          id: visita.id,
+          clienteId: visita.clienteId,
+          vehiculoId: visita.vehiculoId,
+          nombre: visita.Cliente?.nombre || 'Sin nombre',
+          placa: visita.Vehiculo?.placa || 'Sin placa',
+          marca: visita.Vehiculo?.marcaVehiculo?.nombre || 'Sin marca',
+          modelo: visita.Vehiculo?.modeloVehiculo?.nombre || 'Sin modelo',
+          ultimaVisita: visita.fecha,
+          visitaId: visita.id
+        }));
       } catch (error) {
         console.error('Error al obtener últimas visitas:', error);
+        clientes.value = [];
       }
     };
 

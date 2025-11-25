@@ -78,8 +78,21 @@ const error = ref(null);
 
 // Configuración
 const STOCK_BAJO_UMBRAL = ref(5);
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001';
-const socket = io(SOCKET_URL);
+const SOCKET_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+let socket = null;
+
+// Intentar conectar socket solo si está disponible
+try {
+  socket = io(SOCKET_URL, {
+    transports: ['websocket', 'polling'],
+    reconnection: true,
+    reconnectionDelay: 1000,
+    reconnectionAttempts: 5,
+    timeout: 5000
+  });
+} catch (err) {
+  console.warn('Socket.IO no disponible:', err);
+}
 
 // Paginación
 const currentPage = ref(1);
@@ -98,10 +111,14 @@ const cargarProductosStockBajo = async () => {
   error.value = null;
   try {
     const response = await axios.get('/productos');
-    const productos = response.data.productos || response.data;
+    // El backend devuelve { data, totalItems, totalPages, currentPage }
+    const productos = response.data.data || response.data.productos || response.data;
+    
+    // Asegurarse de que productos sea un array
+    const productosArray = Array.isArray(productos) ? productos : [];
     
     // Filtrar productos con stock bajo
-    todosLosProductos.value = productos.filter(
+    todosLosProductos.value = productosArray.filter(
       producto => producto.stock < STOCK_BAJO_UMBRAL.value
     );
     
@@ -129,19 +146,23 @@ const cambiarUmbralStockBajo = (nuevoUmbral) => {
 onMounted(() => {
   cargarProductosStockBajo();
   
-  socket.on('stockUpdated', () => {
-    cargarProductosStockBajo();
-  });
+  if (socket) {
+    socket.on('stockUpdated', () => {
+      cargarProductosStockBajo();
+    });
 
-  socket.on('connect_error', (error) => {
-    console.error('Error de conexión con Socket.IO:', error);
-    error.value = 'Error de conexión con el servidor de tiempo real';
-  });
+    socket.on('connect_error', (err) => {
+      console.warn('Error de conexión con Socket.IO:', err);
+      // No mostrar error al usuario, ya que no es crítico
+    });
+  }
 });
 
 onUnmounted(() => {
-  socket.off('stockUpdated');
-  socket.off('connect_error');
-  socket.disconnect();
+  if (socket) {
+    socket.off('stockUpdated');
+    socket.off('connect_error');
+    socket.disconnect();
+  }
 });
 </script>

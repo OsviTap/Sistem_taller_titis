@@ -1,6 +1,7 @@
 const express = require('express');
 const  Cliente  = require('../models/Cliente');
 const Vehiculo  = require('../models/Vehiculo');
+const Visita  = require('../models/Visita');
 const Marca  = require('../models/Marca');
 const Modelo  = require('../models/Modelo');
 const { sequelize } = require('../models');
@@ -136,23 +137,70 @@ router.put('/:id', async (req, res) => {
                 nit
             }, { transaction: t });
 
-            // Actualizar vehículos
+            // Actualizar vehículos de forma segura SIN eliminarlos
             if (Vehiculos && Vehiculos.length > 0) {
-                // Eliminar vehículos existentes
-                await Vehiculo.destroy({
+                // Obtener vehículos existentes del cliente
+                const vehiculosExistentes = await Vehiculo.findAll({
                     where: { clienteId: id },
                     transaction: t
                 });
 
-                // Crear nuevos vehículos
-                const vehiculosData = Vehiculos.map(v => ({
-                    clienteId: id,
-                    marcaId: v.marcaId,
-                    modeloId: v.modeloId,
-                    placa: v.placa
-                }));
+                // Crear un mapa de vehículos existentes por placa para fácil búsqueda
+                const vehiculosMap = new Map(
+                    vehiculosExistentes.map(v => [v.placa, v])
+                );
 
-                await Vehiculo.bulkCreate(vehiculosData, { transaction: t });
+                // Array para rastrear qué vehículos del form ya procesamos
+                const placasEnFormulario = new Set();
+
+                // Procesar cada vehículo del formulario
+                for (const vehiculoData of Vehiculos) {
+                    placasEnFormulario.add(vehiculoData.placa);
+                    
+                    const vehiculoExistente = vehiculosMap.get(vehiculoData.placa);
+                    
+                    if (vehiculoExistente) {
+                        // ACTUALIZAR vehículo existente (si cambió marca/modelo)
+                        await vehiculoExistente.update({
+                            marcaId: vehiculoData.marcaId,
+                            modeloId: vehiculoData.modeloId,
+                            placa: vehiculoData.placa
+                        }, { transaction: t });
+                    } else {
+                        // CREAR nuevo vehículo
+                        await Vehiculo.create({
+                            clienteId: id,
+                            marcaId: vehiculoData.marcaId,
+                            modeloId: vehiculoData.modeloId,
+                            placa: vehiculoData.placa
+                        }, { transaction: t });
+                    }
+                }
+
+                // ELIMINAR SOLO los vehículos que ya NO están en el formulario
+                // Y que NO tienen visitas asociadas (para prevenir pérdida de datos)
+                for (const vehiculoExistente of vehiculosExistentes) {
+                    if (!placasEnFormulario.has(vehiculoExistente.placa)) {
+                        // Verificar si el vehículo tiene visitas
+                        const visitasCount = await Visita.count({
+                            where: { vehiculoId: vehiculoExistente.id },
+                            transaction: t
+                        });
+
+                        if (visitasCount > 0) {
+                            // NO eliminar, solo marcar como inactivo
+                            await vehiculoExistente.update({
+                                estado: 0
+                            }, { transaction: t });
+                            
+                            console.log(`Vehículo ${vehiculoExistente.placa} marcado como inactivo (tiene ${visitasCount} visitas)`);
+                        } else {
+                            // Seguro eliminar (no tiene visitas)
+                            await vehiculoExistente.destroy({ transaction: t });
+                            console.log(`Vehículo ${vehiculoExistente.placa} eliminado (sin visitas)`);
+                        }
+                    }
+                }
             }
 
             return cliente;

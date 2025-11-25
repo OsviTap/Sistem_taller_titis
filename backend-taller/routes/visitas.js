@@ -1,5 +1,5 @@
 const express = require('express');
-const { Visita, DetalleVisita, Cliente, Vehiculo, Producto, HistorialVisita } = require('../models');
+const { Visita, DetalleVisita, Cliente, Vehiculo, Producto, HistorialVisita, Marca, Modelo } = require('../models');
 const router = express.Router();
 const { sequelize } = require('../models');
 
@@ -25,7 +25,19 @@ router.get('/', async (req, res) => {
                 where: search ? {
                     placa: { [Op.like]: `%${search}%` }
                 } : undefined,
-                required: false
+                required: false,
+                include: [
+                    {
+                        model: Marca,
+                        as: 'marcaVehiculo',
+                        attributes: ['id', 'nombre']
+                    },
+                    {
+                        model: Modelo,
+                        as: 'modeloVehiculo',
+                        attributes: ['id', 'nombre']
+                    }
+                ]
             },
             { 
                 model: DetalleVisita,

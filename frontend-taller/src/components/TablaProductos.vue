@@ -485,6 +485,17 @@ const formatDate = (date) => {
   });
 };
 
+const openViewModal = (producto) => {
+  modalMode.value = 'view';
+  selectedProduct.value = producto;
+  const fechaFormateada = producto.fechaAdquisicion ? new Date(producto.fechaAdquisicion).toISOString().split('T')[0] : '';
+  formData.value = {
+    ...producto,
+    fechaAdquisicion: fechaFormateada
+  };
+  showFormModal.value = true;
+};
+
 const openEditModal = (producto) => {
   modalMode.value = 'edit';
   selectedProduct.value = producto;
@@ -591,6 +602,35 @@ watch(itemsPerPage, () => {
   currentPage.value = 1;
   fetchProductos();
 });
+
+// Agregar la función fetchProductos
+const fetchProductos = async () => {
+  try {
+    isLoading.value = true;
+    const params = {
+      page: currentPage.value,
+      limit: itemsPerPage.value,
+      search: searchTerm.value || undefined
+    };
+    
+    const response = await axios.get('/productos', { params });
+    
+    if (response.data.productos) {
+      productos.value = response.data.productos;
+      totalItems.value = response.data.total || 0;
+      totalPages.value = response.data.totalPages || 1;
+    } else {
+      productos.value = response.data;
+      totalItems.value = response.data.length;
+      totalPages.value = Math.ceil(totalItems.value / itemsPerPage.value);
+    }
+  } catch (error) {
+    console.error('Error al obtener productos:', error);
+    alert('Error al cargar los productos');
+  } finally {
+    isLoading.value = false;
+  }
+};
 
 // Agregar la función openCreateModal
 const openCreateModal = () => {

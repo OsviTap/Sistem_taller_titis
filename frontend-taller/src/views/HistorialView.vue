@@ -225,8 +225,13 @@ const limpiarFiltros = () => {
   fechaInicio.value = '';
   fechaFin.value = '';
   vehiculoIdFilter.value = '';
-  
-  // Limpiar query params de la URL
+  fetchVisitas();
+};
+
+const eliminarVisita = async (id) => {
+  const result = await Swal.fire({
+    title: '¿Está seguro?',
+    text: "Esta acción no se puede deshacer",
     icon: 'warning',
     showCancelButton: true,
     confirmButtonColor: '#3085d6',

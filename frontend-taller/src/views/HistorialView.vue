@@ -7,7 +7,7 @@
       <!-- Barra de búsqueda y selector de items -->
       <div class="flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
         <!-- Búsqueda -->
-        <div class="w-full md:w-1/2">
+        <div class="w-full md:w-1/2 relative">
           <div class="relative">
             <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
               <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
@@ -17,9 +17,26 @@
             <input
               type="text"
               v-model="searchTerm"
+              @focus="showSuggestions = true"
+              @blur="handleBlur"
               class="block p-2 pl-10 text-sm text-gray-900 border border-gray-300 rounded-lg w-full bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
               placeholder="Buscar por cliente, placa, vehículo..."
             >
+            <!-- Sugerencias de búsqueda -->
+            <div v-if="showSuggestions && recentSearches.length > 0" class="absolute z-20 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 dark:bg-gray-700 dark:border-gray-600">
+              <div class="p-2 text-xs text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-600">Búsquedas recientes</div>
+              <ul>
+                <li 
+                  v-for="(term, index) in recentSearches" 
+                  :key="index"
+                  @click="applySearch(term)"
+                  class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer dark:text-gray-200 dark:hover:bg-gray-600 flex justify-between items-center"
+                >
+                  <span>{{ term }}</span>
+                  <button @click.stop="removeSearch(index)" class="text-gray-400 hover:text-red-500">×</button>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
         <!-- Selector de ítems por página -->
@@ -86,8 +103,29 @@
       </div>
     </div>
 
-    <!-- Tabla de Historial -->
-    <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
+    <!-- Filtros Activos -->
+      <div v-if="hasActiveFilters" class="flex flex-wrap gap-2 mb-4">
+        <div v-if="searchTerm" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+          Búsqueda: {{ searchTerm }}
+          <button @click="searchTerm = ''" class="ml-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200">×</button>
+        </div>
+        <div v-if="fechaInicio" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+          Desde: {{ formatDate(fechaInicio) }}
+          <button @click="fechaInicio = ''" class="ml-2 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200">×</button>
+        </div>
+        <div v-if="fechaFin" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+          Hasta: {{ formatDate(fechaFin) }}
+          <button @click="fechaFin = ''" class="ml-2 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200">×</button>
+        </div>
+        <div v-if="clienteFilter" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+          Cliente: {{ getClienteNombre(clienteFilter) }}
+          <button @click="clienteFilter = ''" class="ml-2 text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-200">×</button>
+        </div>
+        <button @click="clearAllFilters" class="text-sm text-gray-500 hover:text-gray-700 underline dark:text-gray-400 dark:hover:text-gray-200">Limpiar todo</button>
+      </div>
+
+      <!-- Tabla -->
+      <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
       <table id="historialTable" class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
         <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
           <tr>
@@ -215,6 +253,56 @@ const currentPage = ref(1);
 const totalPages = ref(1);
 const totalItems = ref(0);
 const itemsPerPage = ref(10);
+const showSuggestions = ref(false);
+const recentSearches = ref([]);
+
+const hasActiveFilters = computed(() => {
+  return searchTerm.value || fechaInicio.value || fechaFin.value || clienteFilter.value || vehiculoIdFilter.value;
+});
+
+const getClienteNombre = (id) => {
+  const cliente = clientes.value.find(c => c.id == id);
+  return cliente ? cliente.nombre : id;
+};
+
+const handleBlur = () => {
+  setTimeout(() => {
+    showSuggestions.value = false;
+  }, 200);
+};
+
+const applySearch = (term) => {
+  searchTerm.value = term;
+  showSuggestions.value = false;
+  // El watcher se encargará de buscar
+};
+
+const removeSearch = (index) => {
+  recentSearches.value.splice(index, 1);
+  localStorage.setItem('recentSearches', JSON.stringify(recentSearches.value));
+};
+
+const saveSearch = (term) => {
+  if (!term || term.trim().length < 2) return;
+  const history = [...recentSearches.value];
+  // Eliminar si ya existe para ponerlo al principio
+  const index = history.indexOf(term);
+  if (index > -1) {
+    history.splice(index, 1);
+  }
+  history.unshift(term);
+  if (history.length > 5) history.pop();
+  recentSearches.value = history;
+  localStorage.setItem('recentSearches', JSON.stringify(history));
+};
+
+const clearAllFilters = () => {
+  searchTerm.value = '';
+  fechaInicio.value = '';
+  fechaFin.value = '';
+  clienteFilter.value = '';
+  vehiculoIdFilter.value = '';
+};
 
 // Cargar Clientes para el filtro
 const fetchClientes = async () => {
@@ -242,6 +330,10 @@ const fetchVisitas = async () => {
       fechaInicio: fechaInicio.value || undefined,
       fechaFin: fechaFin.value || undefined
     };
+
+    if (searchTerm.value) {
+      saveSearch(searchTerm.value);
+    }
 
     const response = await axios.get('/visitas', { params });
     
@@ -533,6 +625,7 @@ watch(itemsPerPage, () => {
 
 // Cargar datos al montar el componente
 onMounted(() => {
+  recentSearches.value = JSON.parse(localStorage.getItem('recentSearches') || '[]');
   fetchClientes();
   fetchVisitas();
 });

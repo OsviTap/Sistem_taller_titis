@@ -1,13 +1,30 @@
 <template>
   <div class="w-full">
   <!-- Search bar -->
-  <div class="mb-4">
+  <div class="mb-4 relative">
     <input
       v-model="searchQuery"
       type="text"
+      @focus="showSuggestions = true"
+      @blur="handleBlur"
       placeholder="Buscar cliente, vehículo o placa..."
       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
     />
+    <!-- Sugerencias de búsqueda -->
+    <div v-if="showSuggestions && recentSearches.length > 0" class="absolute z-20 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 dark:bg-gray-700 dark:border-gray-600">
+      <div class="p-2 text-xs text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-600">Búsquedas recientes</div>
+      <ul>
+        <li 
+          v-for="(term, index) in recentSearches" 
+          :key="index"
+          @click="applySearch(term)"
+          class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer dark:text-gray-200 dark:hover:bg-gray-600 flex justify-between items-center"
+        >
+          <span>{{ term }}</span>
+          <button @click.stop="removeSearch(index)" class="text-gray-400 hover:text-red-500">×</button>
+        </li>
+      </ul>
+    </div>
   </div>
 
   <!-- Table container -->
@@ -369,7 +386,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from '@/api/axios';
 
@@ -378,9 +395,12 @@ export default {
     const router = useRouter();
 
     const searchQuery = ref('');
+    const showSuggestions = ref(false);
+    const recentSearches = ref([]);
     const currentPage = ref(1);
     const itemsPerPage = ref(10);
     const clientes = ref([]);
+    const totalItems = ref(0);
 
     // Estados para modales
     const modalUltimaVisita = ref(false);
@@ -392,31 +412,14 @@ export default {
     const cargandoDetalle = ref(false);
     const cargandoHistorial = ref(false);
 
-    // Filtro seguro que evita errores con toLowerCase
-    const filteredClientes = computed(() => {
-      const searchTerm = searchQuery.value.toLowerCase();
-
-      return clientes.value.filter(cliente => {
-        return (
-          (cliente.Cliente?.nombre && cliente.Cliente.nombre.toLowerCase().includes(searchTerm)) ||
-          (cliente.Vehiculo?.placa && cliente.Vehiculo.placa.toLowerCase().includes(searchTerm)) ||
-          ((cliente.Vehiculo?.marcaVehiculo?.nombre && cliente.Vehiculo?.modeloVehiculo?.nombre) &&
-            `${cliente.Vehiculo.marcaVehiculo.nombre} ${cliente.Vehiculo.modeloVehiculo.nombre}`
-              .toLowerCase()
-              .includes(searchTerm))
-        );
-      });
-    });
+    // Computed properties simplificadas para usar datos del backend
+    const filteredClientes = computed(() => clientes.value);
 
     const totalPages = computed(() => {
-      return Math.ceil(filteredClientes.value.length / itemsPerPage.value);
+      return Math.ceil(totalItems.value / itemsPerPage.value);
     });
 
-    const paginatedClientes = computed(() => {
-      const start = (currentPage.value - 1) * itemsPerPage.value;
-      const end = start + itemsPerPage.value;
-      return filteredClientes.value.slice(start, end);
-    });
+    const paginatedClientes = computed(() => clientes.value);
 
     const formatVehiculo = (vehiculo) => {
       if (!vehiculo) return 'N/A';
@@ -538,19 +541,54 @@ export default {
       if (currentPage.value < totalPages.value) currentPage.value++;
     };
 
+    const handleBlur = () => {
+      setTimeout(() => {
+        showSuggestions.value = false;
+      }, 200);
+    };
+
+    const applySearch = (term) => {
+      searchQuery.value = term;
+      showSuggestions.value = false;
+      currentPage.value = 1;
+      obtenerUltimasVisitas();
+    };
+
+    const removeSearch = (index) => {
+      recentSearches.value.splice(index, 1);
+      localStorage.setItem('recentSearches', JSON.stringify(recentSearches.value));
+    };
+
+    const saveSearch = (term) => {
+      if (!term || term.trim().length < 2) return;
+      const history = [...recentSearches.value];
+      const index = history.indexOf(term);
+      if (index > -1) {
+        history.splice(index, 1);
+      }
+      history.unshift(term);
+      if (history.length > 5) history.pop();
+      recentSearches.value = history;
+      localStorage.setItem('recentSearches', JSON.stringify(history));
+    };
+
     // Esta función debe cargar o actualizar la lista de clientes
     const obtenerUltimasVisitas = async () => {
       try {
-        // Obtener las últimas 10 visitas ordenadas por fecha descendente
+        if (searchQuery.value) {
+          saveSearch(searchQuery.value);
+        }
+
         const response = await axios.get('/visitas', {
           params: {
-            page: 1,
-            limit: 10
+            page: currentPage.value,
+            limit: itemsPerPage.value,
+            search: searchQuery.value
           }
         });
         
-        // Transformar los datos para el formato esperado por la tabla
         const visitas = response.data.data || [];
+        totalItems.value = response.data.totalItems || 0;
         
         // Mapear correctamente según lo que espera el template
         clientes.value = visitas.map(visita => ({
@@ -570,15 +608,35 @@ export default {
       } catch (error) {
         console.error('Error al obtener últimas visitas:', error);
         clientes.value = [];
+        totalItems.value = 0;
       }
     };
 
+    let timeout;
+    watch(searchQuery, () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        currentPage.value = 1;
+        obtenerUltimasVisitas();
+      }, 500);
+    });
+
+    watch([currentPage, itemsPerPage], () => {
+      obtenerUltimasVisitas();
+    });
+
     onMounted(() => {
+      recentSearches.value = JSON.parse(localStorage.getItem('recentSearches') || '[]');
       obtenerUltimasVisitas();
     });
 
     return {
       searchQuery,
+      showSuggestions,
+      recentSearches,
+      handleBlur,
+      applySearch,
+      removeSearch,
       currentPage,
       itemsPerPage,
       filteredClientes,

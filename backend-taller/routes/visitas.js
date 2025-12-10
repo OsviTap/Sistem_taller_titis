@@ -12,38 +12,6 @@ router.get('/', async (req, res) => {
         const { Op } = require('sequelize');
 
         const whereClause = {};
-        const includeOptions = [
-            { 
-                model: Cliente,
-                where: search ? {
-                    nombre: { [Op.like]: `%${search}%` }
-                } : undefined,
-                required: search ? true : false
-            },
-            { 
-                model: Vehiculo,
-                where: search ? {
-                    placa: { [Op.like]: `%${search}%` }
-                } : undefined,
-                required: false,
-                include: [
-                    {
-                        model: Marca,
-                        as: 'marcaVehiculo',
-                        attributes: ['id', 'nombre']
-                    },
-                    {
-                        model: Modelo,
-                        as: 'modeloVehiculo',
-                        attributes: ['id', 'nombre']
-                    }
-                ]
-            },
-            { 
-                model: DetalleVisita,
-                as: 'detalles'
-            }
-        ];
 
         if (clienteId) whereClause.clienteId = clienteId;
         if (vehiculoId) whereClause.vehiculoId = vehiculoId;
@@ -62,13 +30,52 @@ router.get('/', async (req, res) => {
             };
         }
 
+        // Búsqueda inteligente (Cliente OR Placa)
+        if (search) {
+            // Optimización para placas: permite búsqueda flexible (ej: "ABC 123" encuentra "ABC-123")
+            // Reemplaza cualquier caracter no alfanumérico con comodín '%'
+            const searchForPlate = search.replace(/[^a-zA-Z0-9]/g, '%');
+            
+            whereClause[Op.or] = [
+                { '$Cliente.nombre$': { [Op.like]: `%${search}%` } },
+                { '$Vehiculo.placa$': { [Op.like]: `%${searchForPlate}%` } }
+            ];
+        }
+
+        const includeOptions = [
+            { 
+                model: Cliente,
+            },
+            { 
+                model: Vehiculo,
+                include: [
+                    {
+                        model: Marca,
+                        as: 'marcaVehiculo',
+                        attributes: ['id', 'nombre']
+                    },
+                    {
+                        model: Modelo,
+                        as: 'modeloVehiculo',
+                        attributes: ['id', 'nombre']
+                    }
+                ]
+            },
+            { 
+                model: DetalleVisita,
+                as: 'detalles',
+                separate: true // Optimización para evitar problemas con limit/offset y hasMany
+            }
+        ];
+
         const { count, rows } = await Visita.findAndCountAll({
             where: whereClause,
             include: includeOptions,
             limit: parseInt(limit),
             offset: parseInt(offset),
             order: [['fecha', 'DESC']],
-            distinct: true
+            distinct: true,
+            subQuery: false // Necesario para filtrar por columnas de tablas incluidas (Cliente/Vehiculo)
         });
 
         // Enriquecer detalles con nombres de productos/servicios

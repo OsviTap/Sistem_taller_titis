@@ -129,7 +129,7 @@
           
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <!-- Selector de Servicios -->
-            <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+            <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg" ref="productoDropdownRef">
               <h3 class="text-lg font-medium text-gray-800 dark:text-white mb-3">Agregar Servicio</h3>
               <div class="space-y-3">
                 <select v-model="servicioSeleccionado" id="servicio" class="input-select">
@@ -307,6 +307,7 @@ const cantidadProducto = ref(1);
 // Referencias para la búsqueda de productos
 const productoSearchTerm = ref('');
 const showProductosList = ref(false);
+const productoDropdownRef = ref(null);
 
 // Referencias para los datos del formulario
 const fechaActual = ref(new Date());
@@ -372,26 +373,36 @@ const selectProducto = (producto) => {
 // Búsqueda de productos en servidor
 let searchTimeout;
 const buscarProductos = async () => {
-    if (!productoSearchTerm.value || productoSearchTerm.value.length < 2) {
-        productos.value = [];
-        return;
-    }
+  const term = productoSearchTerm.value?.trim();
+  if (!term || term.length < 2) {
+    productos.value = [];
+    showProductosList.value = false;
+    return;
+  }
 
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(async () => {
         try {
             const response = await axios.get('/productos', {
-                params: { search: productoSearchTerm.value }
+        params: { search: term, limit: 15 }
             });
-            productos.value = response.data.map(producto => ({
-                id: producto.id,
-                nombre: producto.nombre,
-                precio: producto.precioVenta,
-                stock: producto.stock || 0
-            }));
-            showProductosList.value = true;
+      const productosResponse = Array.isArray(response.data?.data)
+        ? response.data.data
+        : Array.isArray(response.data)
+          ? response.data
+          : [];
+
+      productos.value = productosResponse.map(producto => ({
+        id: producto.id,
+        nombre: producto.nombre,
+        precio: producto.precioVenta,
+        stock: producto.stock || 0
+      }));
+      showProductosList.value = productos.value.length > 0;
         } catch (error) {
             console.error('Error al buscar productos:', error);
+      productos.value = [];
+      showProductosList.value = false;
         }
     }, 300); // Debounce
 };

@@ -14,7 +14,7 @@
     "axios": "^1.7.9",
     "flowbite": "^2.5.2",
     "html2canvas": "^1.4.1",
-    "jspdf": "^2.5.2",
+    "jspdf": "^4.0.0",
     "simple-datatables": "^9.2.1",
     "socket.io-client": "^4.8.1",
     "sweetalert2": "^11.26.3",

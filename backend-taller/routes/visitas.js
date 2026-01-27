@@ -30,15 +30,21 @@ router.get('/', async (req, res) => {
             };
         }
 
-        // Búsqueda inteligente (Cliente OR Placa)
         if (search) {
-            // Optimización para placas: permite búsqueda flexible (ej: "ABC 123" encuentra "ABC-123")
-            // Reemplaza cualquier caracter no alfanumérico con comodín '%'
-            const searchForPlate = search.replace(/[^a-zA-Z0-9]/g, '%');
-            
+            const term = String(search).trim();
+            const platePattern = term.replace(/[^a-zA-Z0-9]/g, '%');
             whereClause[Op.or] = [
-                { '$Cliente.nombre$': { [Op.like]: `%${search}%` } },
-                { '$Vehiculo.placa$': { [Op.like]: `%${searchForPlate}%` } }
+                { '$Cliente.nombre$': { [Op.like]: `%${term}%` } },
+                { '$Cliente.telefono$': { [Op.like]: `%${term}%` } },
+                { '$Cliente.nit$': { [Op.like]: `%${term}%` } },
+                { '$Cliente.direccion$': { [Op.like]: `%${term}%` } },
+                { '$Vehiculo.placa$': { [Op.like]: `%${platePattern}%` } },
+                { '$Vehiculo.marcaVehiculo.nombre$': { [Op.like]: `%${term}%` } },
+                { '$Vehiculo.modeloVehiculo.nombre$': { [Op.like]: `%${term}%` } },
+                { tipoPago: { [Op.like]: `%${term}%` } },
+                sequelize.where(sequelize.cast(sequelize.col('Visita.kilometraje'), 'CHAR'), { [Op.like]: `%${term}%` }),
+                sequelize.where(sequelize.cast(sequelize.col('Visita.proximoCambio'), 'CHAR'), { [Op.like]: `%${term}%` }),
+                sequelize.where(sequelize.cast(sequelize.col('Visita.total'), 'CHAR'), { [Op.like]: `%${term}%` }),
             ];
         }
 

@@ -25,6 +25,10 @@
         </li>
       </ul>
     </div>
+    <div v-if="searchQuery" class="mt-2 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+      Búsqueda: {{ searchQuery }}
+      <button @click="searchQuery = ''" class="ml-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200">×</button>
+    </div>
   </div>
 
   <!-- Table container -->

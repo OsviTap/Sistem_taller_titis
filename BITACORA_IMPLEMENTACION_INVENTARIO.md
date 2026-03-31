@@ -1,0 +1,148 @@
+# Bitacora de Implementacion - Inventario Profesional
+
+## Formato de registro
+- Fecha:
+- Fase:
+- Objetivo del bloque:
+- Cambios realizados:
+- Archivos tocados:
+- Migraciones ejecutadas:
+- Resultado de build/tests:
+- Riesgos detectados:
+- Decisiones tomadas:
+- Pendientes para siguiente bloque:
+
+---
+
+## Registro 2026-03-31 - Inicio programa inventario profesional
+- Fecha: 2026-03-31
+- Fase: Fase 0 (Fundacion de datos)
+- Objetivo del bloque: Analizar estado actual y construir base tecnica para inventario por ubicaciones y lotes.
+- Cambios realizados:
+  - Se identifico que el sistema actual usa stock global por producto sin separacion Tienda/Almacen.
+  - Se definio arquitectura con 4 entidades nuevas: ubicaciones, lotes, movimientos, snapshot diario.
+  - Se creo API inicial para ingresos, traslados, kardex, stock historico y snapshot.
+  - Se creo documento maestro de fases.
+- Archivos tocados:
+  - backend-taller/models/InventarioUbicacion.js
+  - backend-taller/models/InventarioLote.js
+  - backend-taller/models/InventarioMovimiento.js
+  - backend-taller/models/InventarioStockDiario.js
+  - backend-taller/models/index.js
+  - backend-taller/routes/inventario.js
+  - backend-taller/app.js
+  - db/migration_inventario_profesional.sql
+  - PLAN_INVENTARIO_PROFESIONAL.md
+- Migraciones ejecutadas:
+  - Pendiente de ejecucion: db/migration_inventario_profesional.sql
+- Resultado de build/tests:
+  - Pendiente validacion backend completa en siguiente bloque.
+- Riesgos detectados:
+  - Si no se migra stock historico inicial a lotes, el control por ubicacion arranca en cero.
+  - Integracion con ventas/visitas aun no conectada a consumo por lote.
+- Decisiones tomadas:
+  - Implementar por fases para evitar ruptura operativa.
+  - Mantener stock global temporalmente mientras se migra a control completo por lotes.
+- Pendientes para siguiente bloque:
+  - Integrar salidas por venta/visita a movimientos de inventario (FIFO en TIENDA).
+  - Crear flujo UI de ingreso con costo + % ganancia + precio sugerido.
+  - Definir estrategia de carga inicial de stock existente (ALMACEN o mixto).
+
+## Registro 2026-03-31 - Integracion operativa inicial
+- Fecha: 2026-03-31
+- Fase: Fase 0-1 (Fundacion + inicio de operacion)
+- Objetivo del bloque: Conectar el nuevo inventario a ventas/visitas y habilitar captura de ingresos con margen desde interfaz.
+- Cambios realizados:
+  - Se creo servicio inventarioService con salida FIFO desde TIENDA y fallback legacy cuando aun no existen lotes cargados.
+  - Se integro salida de inventario en rutas de ventas diarias y visitas.
+  - Se actualizo la UI de productos para registrar ingresos por ubicacion con costo, porcentaje de ganancia y precio autocalculado.
+  - Se habilito visualizacion de stock por ubicacion (Tienda/Almacen) en la tabla de productos.
+- Archivos tocados:
+  - backend-taller/services/inventarioService.js
+  - backend-taller/routes/ventasDiarias.js
+  - backend-taller/routes/visitas.js
+  - frontend-taller/src/components/TablaProductos.vue
+- Migraciones ejecutadas:
+  - Aun pendiente de ejecutar: db/migration_inventario_profesional.sql
+- Resultado de build/tests:
+  - Frontend build OK (vite build).
+  - Carga de rutas backend OK con node -e (inventario, ventasDiarias, visitas).
+- Riesgos detectados:
+  - Si no se cargan lotes iniciales, el sistema opera en modo legacy sin trazabilidad por lote.
+  - Para una adopcion total, falta activar traslados operativos y politica de abastecimiento a TIENDA.
+- Decisiones tomadas:
+  - Mantener compatibilidad operativa durante transicion con fallback controlado.
+  - Priorizar continuidad del negocio antes de exigir trazabilidad estricta en todos los productos.
+- Pendientes para siguiente bloque:
+  - Ejecutar migracion en base de datos y realizar carga inicial de lotes desde stock actual.
+  - Crear vista dedicada de kardex y movimientos internos.
+  - Agregar alertas de stock minimo por ubicacion y recomendaciones de reposicion.
+
+## Registro 2026-03-31 - Ejecucion de migracion y carga inicial
+- Fecha: 2026-03-31
+- Fase: Fase 1 (Puesta en marcha operativa)
+- Objetivo del bloque: Ejecutar en base real la migracion de inventario profesional y convertir stock historico en lotes operativos.
+- Cambios realizados:
+  - Se creo script ejecutable para correr la migracion SQL completa desde Node.
+  - Se agregaron scripts npm para estandarizar ejecucion de migracion y seed.
+  - Se ejecuto la migracion `migration_inventario_profesional.sql` con resultado exitoso.
+  - Se ejecuto seed inicial de inventario con generacion de lotes y movimientos de ingreso por ALMACEN.
+  - Se agrego `.gitignore` en raiz para evitar nuevo ruido de dependencias locales.
+- Archivos tocados:
+  - .gitignore
+  - backend-taller/package.json
+  - backend-taller/scripts/run_migration_inventario_profesional.js
+  - backend-taller/scripts/seed_inventario_inicial.js
+- Migraciones ejecutadas:
+  - Ejecutada OK: db/migration_inventario_profesional.sql
+- Resultado de build/tests:
+  - migrate:inventario OK
+  - seed:inventario-inicial OK
+  - Resultado seed: 465 productos con lote inicial creado, 50 productos omitidos.
+- Riesgos detectados:
+  - El backend mantiene `logging: console.log` en Sequelize y puede generar salida muy extensa en seeds largos.
+  - `backend-taller/node_modules` sigue versionado historicamente, aunque ahora se redujo ruido de no rastreados con `.gitignore`.
+- Decisiones tomadas:
+  - Mantener inicializacion de lotes en ALMACEN para tener una base ordenada antes de definir politicas de reposicion a TIENDA.
+  - Usar scripts npm dedicados para repetir despliegues en otros entornos sin ejecutar SQL manual.
+- Pendientes para siguiente bloque:
+  - Crear y validar endpoint/vista de kardex historico para auditoria diaria.
+  - Implementar alertas por `stockMinimo` y recomendaciones de traslado ALMACEN -> TIENDA.
+  - Definir proceso de cierre diario con snapshot automatico.
+
+## Registro 2026-03-31 - Kardex, alertas y snapshot automatico
+- Fecha: 2026-03-31
+- Fase: Fase 2 (Control operativo y auditoria)
+- Objetivo del bloque: Completar control diario con kardex auditable, alertas de reposicion y cierre automatico de snapshot.
+- Cambios realizados:
+  - Se creo endpoint `GET /api/inventario/kardex-historico` con saldo inicial/final, resumen diario y saldo corrido por movimiento.
+  - Se creo endpoint `GET /api/inventario/alertas-reposicion` con deficit por Tienda y sugerencia de traslado desde Almacen.
+  - Se agrego endpoint `GET /api/inventario/snapshot-diario/estado` para consulta operativa de ultimo cierre.
+  - Se refactorizo `POST /api/inventario/snapshot-diario` para usar servicio reutilizable.
+  - Se implemento scheduler automatico diario en backend (`snapshotSchedulerService`) y se inicializa en arranque del servidor.
+  - Se creo vista frontend de control integral de inventario con filtros de kardex, alertas y disparo manual de snapshot.
+- Archivos tocados:
+  - backend-taller/routes/inventario.js
+  - backend-taller/services/inventarioService.js
+  - backend-taller/services/snapshotSchedulerService.js
+  - backend-taller/models/Producto.js
+  - backend-taller/bin/www
+  - frontend-taller/src/views/InventarioControlView.vue
+  - frontend-taller/src/router/index.js
+  - frontend-taller/src/components/Sidebar.vue
+  - frontend-taller/src/views/ProductosView.vue
+- Migraciones ejecutadas:
+  - No nuevas en este bloque (se reutiliza estructura ya migrada).
+- Resultado de build/tests:
+  - Build frontend OK (`vite build`).
+  - Carga runtime de modulos backend OK (`inventario routes/services ok`).
+- Riesgos detectados:
+  - En despliegues con multiples instancias, el scheduler puede intentar ejecutar en paralelo (la operacion sigue siendo idempotente por `upsert`).
+  - Productos con `stockMinimo = 0` dependen de fallback configurable para emitir alerta.
+- Decisiones tomadas:
+  - Mantener fallback de minimo por defecto (`stockMinimoDefault=5`) para no dejar productos sin control mientras se parametriza catalogo.
+  - Exponer tambien endpoint de estado para control operacional del cierre diario.
+- Pendientes para siguiente bloque:
+  - Habilitar edicion masiva de `stockMinimo`/`sku` desde interfaz de productos.
+  - Agregar exportacion de kardex diario (CSV/PDF) para contabilidad.
+  - Revisar warning `useUTC` en configuracion MySQL2 para compatibilidad futura.

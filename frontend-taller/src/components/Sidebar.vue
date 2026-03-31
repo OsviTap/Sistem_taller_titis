@@ -1,11 +1,15 @@
 <template>
-    <aside id="logo-sidebar" :class="[
-       'fixed top-12 left-0 z-40 w-64 h-screen pt-19 transition-transform',
-       'sm:translate-x-0', // Siempre visible en pantallas sm y superiores
-       isOpen ? 'translate-x-0' : '-translate-x-full', // Solo afecta a móviles
-       'bg-white border-r border-gray-200 dark:bg-gray-800 dark:border-gray-700',
-     ]" aria-label="Sidebar">
-        <div class="h-full px-3 py-4 overflow-y-auto bg-gray-50 dark:bg-gray-800">
+        <aside
+            id="logo-sidebar"
+            :class="[
+                'fixed left-0 top-16 z-40 h-[calc(100vh-4rem)] w-64 border-r border-gray-200 bg-white transition-transform duration-300 dark:border-gray-700 dark:bg-gray-800',
+                'sm:translate-x-0',
+                isOpen ? 'translate-x-0' : '-translate-x-full',
+            ]"
+            aria-label="Sidebar"
+            @click.capture="handleAnyClick"
+        >
+                <div class="h-full overflow-y-auto bg-gray-50 px-3 py-4 dark:bg-gray-800">
             <ul class="space-y-2 font-medium">
                 <!-- Dashboard -->
                 <li>
@@ -44,6 +48,19 @@
                                 d="M7.58209 8.96025 9.8136 11.1917l-1.61782 1.6178c-1.08305-.1811-2.23623.1454-3.07364.9828-1.1208 1.1208-1.32697 2.8069-.62368 4.1363.14842.2806.42122.474.73509.5213.06726.0101.1347.0133.20136.0098-.00351.0666-.00036.1341.00977.2013.04724.3139.24069.5867.52125.7351 1.32944.7033 3.01552.4971 4.13627-.6237.8375-.8374 1.1639-1.9906.9829-3.0736l4.8107-4.8108c1.0831.1811 2.2363-.1454 3.0737-.9828 1.1208-1.1208 1.3269-2.80688.6237-4.13632-.1485-.28056-.4213-.474-.7351-.52125-.0673-.01012-.1347-.01327-.2014-.00977.0035-.06666.0004-.13409-.0098-.20136-.0472-.31386-.2406-.58666-.5212-.73508-1.3294-.70329-3.0155-.49713-4.1363.62367-.8374.83741-1.1639 1.9906-.9828 3.07365l-1.7788 1.77875-2.23152-2.23148-1.41419 1.41424Z" />
                         </svg>
                         <span class="ms-3">Productos</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/inventario-control"
+                        class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <svg class="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400"
+                            aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"
+                            viewBox="0 0 24 24">
+                            <path fill-rule="evenodd"
+                                d="M5 3a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v9a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-9h1a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H5Zm1 7h12v9H6v-9Zm1-5h10v3H7V5Zm2 8a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2H9Z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        <span class="ms-3">Control Inventario</span>
                     </a>
                 </li>
                 <!-- Servicios -->
@@ -115,6 +132,20 @@
                     <span class="ms-3">Historial</span>
                     </a>
                 </li>
+                <!-- Ventas Diarias -->
+                <li>
+                    <a href="/ventas-diarias"
+                        class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <svg class="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400" aria-hidden="true"
+                            xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"
+                            viewBox="0 0 24 24">
+                            <path fill-rule="evenodd"
+                                d="M4 4a1 1 0 0 1 1-1h14a1 1 0 0 1 .894 1.447l-2 4A1 1 0 0 1 17 9H8.618l-.894 2H17a1 1 0 1 1 0 2H7a1 1 0 0 1-.895-1.447L7.382 9H6a1 1 0 1 1 0-2h2.382l1.447-2.894A1 1 0 0 1 10.724 3H5a1 1 0 0 1-1-1Zm2 13a2 2 0 1 1 0 4 2 2 0 0 1 0-4Zm10 0a2 2 0 1 1 0 4 2 2 0 0 1 0-4Z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        <span class="ms-3">Ventas Diarias</span>
+                    </a>
+                </li>
                 <!-- Usuarios -->
                 <li>
                     <a href="/usuarios"
@@ -137,11 +168,24 @@
 <script>
  export default {
    name: "Sidebar",
+     emits: ['close-mobile'],
    props: {
      isOpen: {
        type: Boolean,
        required: true,
      },
    },
+        methods: {
+            handleAnyClick(event) {
+                if (window.innerWidth >= 640) {
+                    return;
+                }
+
+                const clickedLink = event.target.closest('a');
+                if (clickedLink) {
+                    this.$emit('close-mobile');
+                }
+            },
+        },
  };
 </script>

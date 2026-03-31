@@ -2,7 +2,7 @@
   <div>
     <div class="bg-white dark:bg-gray-800 relative shadow-md sm:rounded-lg">
       <!-- Barra de búsqueda y selector de páginas -->
-      <div class="flex flex-col md:flex-row items-center justify-between space-y-3 md:space-y-0 md:space-x-4 p-4">
+      <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between space-y-3 md:space-y-0 md:space-x-4 p-4">
         <!-- Búsqueda -->
         <div class="w-full md:w-1/2">
           <div class="relative">
@@ -37,7 +37,7 @@
 
       <!-- Tabla -->
       <div class="overflow-x-auto">
-        <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+        <table class="w-full min-w-[680px] text-sm text-left text-gray-500 dark:text-gray-400">
           <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
             <tr>
               <th v-for="(column, index) in columns" 
@@ -92,14 +92,14 @@
       </div>
 
       <!-- Paginación -->
-      <nav class="flex flex-col md:flex-row justify-between items-center space-y-3 md:space-y-0 p-4">
+      <nav class="flex flex-col md:flex-row justify-between items-start md:items-center space-y-3 md:space-y-0 p-4">
         <span class="text-sm font-normal text-gray-500 dark:text-gray-400">
           Mostrando 
           <span class="font-semibold text-gray-900 dark:text-white">{{ startIndex + 1 }}-{{ Math.min(endIndex, filteredUsuarios.length) }}</span>
           de
           <span class="font-semibold text-gray-900 dark:text-white">{{ filteredUsuarios.length }}</span>
         </span>
-        <ul class="inline-flex items-stretch -space-x-px">
+        <ul class="inline-flex items-stretch -space-x-px overflow-x-auto max-w-full pb-1">
           <li>
             <button
               @click="previousPage"
@@ -147,9 +147,9 @@
       <div class="flex items-center justify-center min-h-screen p-4">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
         
-        <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
           <div class="flex items-start justify-between p-4 border-b">
-            <h3 class="text-xl font-semibold">
+            <h3 class="text-lg sm:text-xl font-semibold">
               {{ modalMode === 'create' ? 'Registrar Usuario' : 
                  modalMode === 'edit' ? 'Editar Usuario' : 'Ver Usuario' }}
             </h3>

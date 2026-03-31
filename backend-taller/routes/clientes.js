@@ -114,10 +114,23 @@ router.post('/', async (req, res) => {
 
             // Si hay vehículos, crearlos
             if (Vehiculos && Vehiculos.length > 0) {
-                const vehiculosData = Vehiculos.map(v => ({
-                    ...v,
-                    clienteId: cliente.id
-                }));
+                const anioMaximo = new Date().getFullYear() + 1;
+                const vehiculosData = Vehiculos.map(v => {
+                    const anioNormalizado = parseInt(v.anio, 10);
+                    if (Number.isNaN(anioNormalizado) || anioNormalizado < 1900 || anioNormalizado > anioMaximo) {
+                        const err = new Error(`Año de vehículo no válido. Debe estar entre 1900 y ${anioMaximo}`);
+                        err.statusCode = 400;
+                        throw err;
+                    }
+
+                    return {
+                        ...v,
+                        clienteId: cliente.id,
+                        marcaId: parseInt(v.marcaId, 10),
+                        modeloId: parseInt(v.modeloId, 10),
+                        anio: anioNormalizado
+                    };
+                });
                 await Vehiculo.bulkCreate(vehiculosData, { transaction: t });
             }
 
@@ -139,7 +152,8 @@ router.post('/', async (req, res) => {
         res.status(201).json(clienteCreado);
     } catch (error) {
         console.error('Error al crear cliente:', error);
-        res.status(500).json({ error: 'Error al crear cliente' });
+        const statusCode = error.statusCode || 500;
+        res.status(statusCode).json({ error: error.message || 'Error al crear cliente' });
     }
 });
 
@@ -196,6 +210,13 @@ router.put('/:id', async (req, res) => {
                 // Procesar cada vehículo del formulario
                 for (const vehiculoData of Vehiculos) {
                     placasEnFormulario.add(vehiculoData.placa);
+                    const anioNormalizado = parseInt(vehiculoData.anio, 10);
+                    const anioMaximo = new Date().getFullYear() + 1;
+                    if (Number.isNaN(anioNormalizado) || anioNormalizado < 1900 || anioNormalizado > anioMaximo) {
+                        const err = new Error(`Año de vehículo no válido. Debe estar entre 1900 y ${anioMaximo}`);
+                        err.statusCode = 400;
+                        throw err;
+                    }
                     
                     const vehiculoExistente = vehiculosMap.get(vehiculoData.placa);
                     
@@ -204,7 +225,8 @@ router.put('/:id', async (req, res) => {
                         await vehiculoExistente.update({
                             marcaId: vehiculoData.marcaId,
                             modeloId: vehiculoData.modeloId,
-                            placa: vehiculoData.placa
+                            placa: vehiculoData.placa,
+                            anio: anioNormalizado
                         }, { transaction: t });
                     } else {
                         // CREAR nuevo vehículo
@@ -212,7 +234,8 @@ router.put('/:id', async (req, res) => {
                             clienteId: id,
                             marcaId: vehiculoData.marcaId,
                             modeloId: vehiculoData.modeloId,
-                            placa: vehiculoData.placa
+                            placa: vehiculoData.placa,
+                            anio: anioNormalizado
                         }, { transaction: t });
                     }
                 }
@@ -261,7 +284,8 @@ router.put('/:id', async (req, res) => {
         res.json(clienteActualizado);
     } catch (error) {
         console.error('Error detallado:', error);
-        res.status(500).json({ 
+        const statusCode = error.statusCode || 500;
+        res.status(statusCode).json({ 
             error: 'Error al actualizar cliente',
             details: error.message,
             stack: error.stack

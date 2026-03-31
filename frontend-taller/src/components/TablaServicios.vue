@@ -1,5 +1,5 @@
 <template>
-    <div class="relative overflow-x-auto shadow-md sm:rounded-lg m-4">
+    <div class="relative overflow-x-auto shadow-md sm:rounded-lg m-2 sm:m-4">
     
     <!-- Barra de Búsqueda -->
     <div class="pb-4 bg-white dark:bg-gray-800 px-4 pt-4">
@@ -28,7 +28,7 @@
     
     <!-- Tabla -->
     <div v-else class="overflow-x-auto">
-      <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+      <table class="w-full min-w-[640px] text-sm text-left text-gray-500 dark:text-gray-400">
         <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
           <tr>
             <th scope="col" class="px-6 py-3">Nombre</th>
@@ -145,7 +145,7 @@
       <Teleport to="body">
         <div v-if="showModal" class="fixed inset-0 flex items-center justify-center z-50 p-4" @click="closeModal">
           <div class="fixed inset-0 bg-gray-900 bg-opacity-50 transition-opacity"></div>
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md relative z-10 transform transition-all" @click.stop>
+          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto relative z-10 transform transition-all" @click.stop>
             <!-- Header -->
             <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4 rounded-t-xl">
               <div class="flex items-center justify-between">

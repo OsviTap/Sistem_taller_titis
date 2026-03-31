@@ -202,6 +202,7 @@ CREATE TABLE IF NOT EXISTS `vehiculos` (
   `clienteId` int DEFAULT NULL,
   `marcaId` int DEFAULT '0',
   `modeloId` int DEFAULT '0',
+  `anio` int NOT NULL,
   `placa` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
   `createdAt` datetime DEFAULT NULL,
   `updatedAt` datetime DEFAULT NULL,

@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- Agregar barra de búsqueda y selector de items por página -->
-    <div class="flex flex-col md:flex-row items-center justify-between space-y-3 md:space-y-0 md:space-x-4 p-4">
+    <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between space-y-3 md:space-y-0 md:space-x-4 p-4">
       <!-- Búsqueda -->
       <div class="w-full md:w-1/2">
         <div class="relative">
@@ -35,196 +35,71 @@
     </div>
 
     <!-- Tabla existente -->
-    <div class="relative overflow-x-auto shadow-md sm:rounded-lg m-4">
+    <div class="relative overflow-x-auto shadow-md sm:rounded-lg m-2 sm:m-4">
       <!-- Mensaje cuando no hay productos -->
       <div v-if="!isLoading && productos.length === 0" class="p-8 text-center">
         <p class="text-gray-500 dark:text-gray-400">No se encontraron productos</p>
       </div>
 
       <!-- Tabla de productos -->
-      <div v-if="productos.length > 0" >
-        <table  id="filter-table" class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-        <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-          <tr>
-            
-            <th scope="col" class="px-6 py-3">Nombre</th>
-            <th scope="col" class="px-6 py-3">Stock</th>
-            <th scope="col" class="px-6 py-3">Precio Costo</th>
-            <th scope="col" class="px-6 py-3">Precio Venta</th>
-            <th scope="col" class="px-6 py-3">Fecha Adquisición</th>
-            <th scope="col" class="px-6 py-3">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="producto in paginatedProductos" :key="producto.id" class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
-            
-            <td class="px-6 py-4">{{ producto.nombre }}</td>
-            <td class="px-6 py-4">{{ producto.stock }}</td>
-            <td class="px-6 py-4">{{ producto.precioCosto }}</td>
-            <td class="px-6 py-4">{{ producto.precioVenta }}</td>
-            <td class="px-6 py-4">{{ formatDate(producto.fechaAdquisicion) }}</td>
-            <td class="px-6 py-4">
-              <div class="flex items-center space-x-4">
-                <button @click="openViewModal(producto)" class="text-blue-600 hover:text-blue-900">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                  </svg>
-                </button>
-                <button @click="openEditModal(producto)" class="text-yellow-600 hover:text-yellow-900">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
-                  </svg>
-                </button>
-                <button @click="confirmarEliminacion(producto)" class="text-red-600 hover:text-red-700">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                  </svg>
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      </div>
-      
-    </div>
-
-    <!-- Modal de Crear/Editar Producto -->
-    <div v-if="showFormModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div class="relative bg-white rounded-lg shadow dark:bg-gray-800 w-full max-w-md">
-        <!-- Header del Modal -->
-        <div class="flex items-center justify-between p-4 border-b rounded-t dark:border-gray-600">
-          <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
-            {{ modalMode === 'create' ? 'Registrar Producto' : modalMode === 'edit' ? 'Editar Producto' : 'Ver Producto' }}
-          </h3>
-          <button @click="closeModal" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center dark:hover:bg-gray-600 dark:hover:text-white">
-            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
-            </svg>
-          </button>
-        </div>
-
-        <!-- Contenido del Modal -->
-        <div class="p-6 space-y-6">
-          <form @submit.prevent="submitForm">
-            <div class="grid gap-4 mb-4">
-              <div>
-                <label for="nombre" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Nombre</label>
-                <input 
-                  type="text" 
-                  id="nombre" 
-                  v-model="formData.nombre" 
-                  class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" 
-                  required
-                  :disabled="modalMode === 'view'"
-                >
-              </div>
-              <div>
-                <label for="stock" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Stock</label>
-                <input 
-                  type="number" 
-                  id="stock" 
-                  v-model="formData.stock" 
-                  class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" 
-                  required
-                  :disabled="modalMode === 'view'"
-                >
-              </div>
-              <div>
-                <label for="precioCosto" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Precio Costo</label>
-                <input 
-                  type="number" 
-                  id="precioCosto" 
-                  v-model="formData.precioCosto" 
-                  class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" 
-                  required
-                  step="0.01"
-                  :disabled="modalMode === 'view'"
-                >
-              </div>
-              <div>
-                <label for="precioVenta" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Precio Venta</label>
-                <input 
-                  type="number" 
-                  id="precioVenta" 
-                  v-model="formData.precioVenta" 
-                  class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" 
-                  required
-                  step="0.01"
-                  :disabled="modalMode === 'view'"
-                >
-              </div>
-              <div>
-                <label for="fechaAdquisicion" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Fecha Adquisición</label>
-                <input 
-                  type="date" 
-                  id="fechaAdquisicion" 
-                  v-model="formData.fechaAdquisicion" 
-                  class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" 
-                  required
-                  :disabled="modalMode === 'view'"
-                >
-              </div>
-            </div>
-            
-            <!-- Botones del Modal -->
-            <div class="flex items-center justify-end space-x-2 border-t pt-4">
-              <button 
-                type="button"
-                @click="closeModal"
-                class="text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-500 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-600"
-              >
-                Cancelar
-              </button>
-              <button 
-                v-if="modalMode !== 'view'"
-                type="submit"
-                class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
-              >
-                {{ modalMode === 'create' ? 'Registrar' : 'Actualizar' }}
-              </button>
-            </div>
-          </form>
-        </div>
+      <div v-if="productos.length > 0">
+        <table id="filter-table" class="w-full min-w-[980px] text-sm text-left text-gray-500 dark:text-gray-400">
+          <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+            <tr>
+              <th scope="col" class="px-6 py-3">Nombre</th>
+              <th scope="col" class="px-6 py-3">Stock Total</th>
+              <th scope="col" class="px-6 py-3">Tienda</th>
+              <th scope="col" class="px-6 py-3">Almacen</th>
+              <th scope="col" class="px-6 py-3">Precio Costo</th>
+              <th scope="col" class="px-6 py-3">Precio Venta</th>
+              <th scope="col" class="px-6 py-3">Fecha Adquisición</th>
+              <th scope="col" class="px-6 py-3">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="producto in paginatedProductos" :key="producto.id" class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+              <td class="px-6 py-4">{{ producto.nombre }}</td>
+              <td class="px-6 py-4">{{ producto.stock }}</td>
+              <td class="px-6 py-4">{{ producto.stockPorUbicacion?.TIENDA ?? '-' }}</td>
+              <td class="px-6 py-4">{{ producto.stockPorUbicacion?.ALMACEN ?? '-' }}</td>
+              <td class="px-6 py-4">{{ producto.precioCosto }}</td>
+              <td class="px-6 py-4">{{ producto.precioVenta }}</td>
+              <td class="px-6 py-4">{{ formatDate(producto.fechaAdquisicion) }}</td>
+              <td class="px-6 py-4">
+                <div class="flex items-center gap-3">
+                  <button @click="openViewModal(producto)" class="text-blue-600 hover:text-blue-900">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                    </svg>
+                  </button>
+                  <button @click="openEditModal(producto)" class="text-yellow-600 hover:text-yellow-900">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                    </svg>
+                  </button>
+                  <button @click="confirmarEliminacion(producto)" class="text-red-600 hover:text-red-700">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
-    <!-- Modal de Confirmación de Eliminación -->
-<div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-  <div class="relative bg-white rounded-lg shadow dark:bg-gray-800 w-full max-w-md">
-    <div class="p-6 text-center">
-      <svg class="mx-auto mb-4 text-gray-400 w-12 h-12 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-      </svg>
-      <h3 class="mb-5 text-lg font-normal text-gray-500 dark:text-gray-400">
-        ¿Está seguro que desea eliminar este producto?
-      </h3>
-      <button 
-        @click="deleteProducto"
-        class="text-white bg-red-600 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 dark:focus:ring-red-800 font-medium rounded-lg text-sm inline-flex items-center px-5 py-2.5 text-center mr-2"
-      >
-        Sí, eliminar
-      </button>
-      <button 
-        @click="showDeleteModal = false"
-        class="text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-200 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-500 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-600"
-      >
-        No, cancelar
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- BLOQUE DE PAGINACIÓN (fuera del modal) -->
-<nav class="flex flex-col md:flex-row justify-between items-center space-y-3 md:space-y-0 p-4">
+    <!-- BLOQUE DE PAGINACIÓN -->
+    <nav class="flex flex-col md:flex-row justify-between items-start md:items-center space-y-3 md:space-y-0 p-4">
   <span class="text-sm font-normal text-gray-500 dark:text-gray-400">
     Mostrando 
     <span class="font-semibold text-gray-900 dark:text-white">{{ startIndex + 1 }}-{{ Math.min(endIndex, totalItems) }}</span>
     de
     <span class="font-semibold text-gray-900 dark:text-white">{{ totalItems }}</span>
   </span>
-  <ul class="inline-flex items-stretch -space-x-px">
+  <ul class="inline-flex items-stretch -space-x-px overflow-x-auto max-w-full pb-1">
     <li>
       <button
         @click="previousPage"
@@ -271,14 +146,13 @@
       </button>
     </li>
   </ul>
-</nav>
+    </nav>
 
     <!-- Modal de Crear/Editar Producto -->
-    <div v-if="showFormModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div class="relative bg-white rounded-lg shadow dark:bg-gray-800 w-full max-w-md">
-        <!-- Header del Modal -->
+    <div v-if="showFormModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+      <div class="relative bg-white rounded-lg shadow dark:bg-gray-800 w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between p-4 border-b rounded-t dark:border-gray-600">
-          <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
+          <h3 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
             {{ modalMode === 'create' ? 'Registrar Producto' : modalMode === 'edit' ? 'Editar Producto' : 'Ver Producto' }}
           </h3>
           <button @click="closeModal" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center dark:hover:bg-gray-600 dark:hover:text-white">
@@ -288,8 +162,7 @@
           </button>
         </div>
 
-        <!-- Contenido del Modal -->
-        <div class="p-6 space-y-6">
+        <div class="p-4 sm:p-6 space-y-6">
           <form @submit.prevent="submitForm">
             <div class="grid gap-4 mb-4">
               <div>
@@ -312,6 +185,28 @@
                   class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" 
                   required
                   :disabled="modalMode === 'view'"
+                >
+              </div>
+              <div v-if="modalMode === 'create'">
+                <label for="ubicacionIngreso" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Ubicación de ingreso</label>
+                <select
+                  id="ubicacionIngreso"
+                  v-model="formData.ubicacionIngreso"
+                  class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                >
+                  <option value="ALMACEN">Almacen</option>
+                  <option value="TIENDA">Tienda</option>
+                </select>
+              </div>
+              <div v-if="modalMode === 'create'">
+                <label for="porcentajeGanancia" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Ganancia (%)</label>
+                <input
+                  type="number"
+                  id="porcentajeGanancia"
+                  v-model="formData.porcentajeGanancia"
+                  min="0"
+                  step="0.01"
+                  class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                 >
               </div>
               <div>
@@ -337,6 +232,9 @@
                   step="0.01"
                   :disabled="modalMode === 'view'"
                 >
+                <p v-if="modalMode === 'create'" class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Se calcula automaticamente en base al costo y % de ganancia.
+                </p>
               </div>
               <div>
                 <label for="fechaAdquisicion" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Fecha Adquisición</label>
@@ -349,21 +247,48 @@
                   :disabled="modalMode === 'view'"
                 >
               </div>
+              <div v-if="modalMode === 'create'">
+                <label for="documentoIngreso" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Documento Ingreso</label>
+                <input
+                  type="text"
+                  id="documentoIngreso"
+                  v-model="formData.documentoIngreso"
+                  class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                  placeholder="Factura, recibo, guia"
+                >
+              </div>
+              <div v-if="modalMode === 'create'">
+                <label for="proveedor" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Proveedor</label>
+                <input
+                  type="text"
+                  id="proveedor"
+                  v-model="formData.proveedor"
+                  class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                >
+              </div>
+              <div v-if="modalMode === 'create'">
+                <label for="observacionesInventario" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Observaciones de ingreso</label>
+                <input
+                  type="text"
+                  id="observacionesInventario"
+                  v-model="formData.observacionesInventario"
+                  class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                >
+              </div>
             </div>
             
-            <!-- Botones del Modal -->
-            <div class="flex items-center justify-end space-x-2 border-t pt-4">
+            <div class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 border-t pt-4">
               <button 
                 type="button"
                 @click="closeModal"
-                class="text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-500 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-600"
+                class="text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-blue-300 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-500 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-600 w-full sm:w-auto"
               >
                 Cancelar
               </button>
               <button 
                 v-if="modalMode !== 'view'"
                 type="submit"
-                class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+                class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 w-full sm:w-auto"
               >
                 {{ modalMode === 'create' ? 'Registrar' : 'Actualizar' }}
               </button>
@@ -374,8 +299,8 @@
     </div>
 
     <!-- Modal de Confirmación de Eliminación -->
-    <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div class="relative bg-white rounded-lg shadow dark:bg-gray-800 w-full max-w-md">
+    <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+      <div class="relative bg-white rounded-lg shadow dark:bg-gray-800 w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div class="p-6 text-center">
           <svg class="mx-auto mb-4 text-gray-400 w-12 h-12 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -383,18 +308,20 @@
           <h3 class="mb-5 text-lg font-normal text-gray-500 dark:text-gray-400">
             ¿Está seguro que desea eliminar este producto?
           </h3>
-          <button 
-            @click="deleteProducto"
-            class="text-white bg-red-600 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 dark:focus:ring-red-800 font-medium rounded-lg text-sm inline-flex items-center px-5 py-2.5 text-center mr-2"
-          >
-            Sí, eliminar
-          </button>
-          <button 
-            @click="showDeleteModal = false"
-            class="text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-200 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-500 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-600"
-          >
-            No, cancelar
-          </button>
+          <div class="flex flex-col-reverse sm:flex-row gap-2 justify-center">
+            <button 
+              @click="showDeleteModal = false"
+              class="text-gray-500 bg-white hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-200 rounded-lg border border-gray-200 text-sm font-medium px-5 py-2.5 hover:text-gray-900 focus:z-10 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-500 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-600 w-full sm:w-auto"
+            >
+              No, cancelar
+            </button>
+            <button 
+              @click="deleteProducto"
+              class="text-white bg-red-600 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 dark:focus:ring-red-800 font-medium rounded-lg text-sm inline-flex items-center justify-center px-5 py-2.5 text-center w-full sm:w-auto"
+            >
+              Sí, eliminar
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -417,7 +344,12 @@ const formData = ref({
   stock: 0,
   precioCosto: 0,
   precioVenta: 0,
-  fechaAdquisicion: ''
+  fechaAdquisicion: '',
+  ubicacionIngreso: 'ALMACEN',
+  porcentajeGanancia: 30,
+  documentoIngreso: '',
+  proveedor: '',
+  observacionesInventario: ''
 });
 const searchTerm = ref('');
 const currentPage = ref(1);
@@ -477,22 +409,68 @@ const closeModal = () => {
     stock: 0,
     precioCosto: 0,
     precioVenta: 0,
-    fechaAdquisicion: ''
+    fechaAdquisicion: '',
+    ubicacionIngreso: 'ALMACEN',
+    porcentajeGanancia: 30,
+    documentoIngreso: '',
+    proveedor: '',
+    observacionesInventario: ''
   };
   selectedProduct.value = null;
 };
 
+const recalcularPrecioVenta = () => {
+  if (modalMode.value !== 'create') return;
+  const costo = Number(formData.value.precioCosto || 0);
+  const margen = Number(formData.value.porcentajeGanancia || 0);
+  if (costo <= 0 || margen < 0) return;
+  formData.value.precioVenta = Number((costo * (1 + (margen / 100))).toFixed(2));
+};
+
 const submitForm = async () => {
   try {
-    const dataToSend = {
-      ...formData.value,
-      fechaAdquisicion: formData.value.fechaAdquisicion ? new Date(formData.value.fechaAdquisicion).toISOString() : null
-    };
-
     if (modalMode.value === 'create') {
-      await axios.post('/productos', dataToSend);
-      alert('Producto creado exitosamente');
+      const cantidadIngreso = Number(formData.value.stock || 0);
+      if (cantidadIngreso <= 0) {
+        alert('La cantidad de ingreso debe ser mayor a 0');
+        return;
+      }
+
+      const productoPayload = {
+        nombre: formData.value.nombre,
+        stock: 0,
+        precioCosto: formData.value.precioCosto,
+        precioVenta: formData.value.precioVenta,
+        fechaAdquisicion: formData.value.fechaAdquisicion
+          ? new Date(formData.value.fechaAdquisicion).toISOString()
+          : new Date().toISOString()
+      };
+
+      const productoCreado = await axios.post('/productos', productoPayload);
+
+      await axios.post('/inventario/ingresos', {
+        productoId: productoCreado.data.id,
+        ubicacionCodigo: formData.value.ubicacionIngreso,
+        fechaIngreso: formData.value.fechaAdquisicion,
+        cantidad: cantidadIngreso,
+        costoUnitario: formData.value.precioCosto,
+        porcentajeGanancia: formData.value.porcentajeGanancia,
+        precioVentaSugerido: formData.value.precioVenta,
+        documentoIngreso: formData.value.documentoIngreso,
+        proveedor: formData.value.proveedor,
+        observaciones: formData.value.observacionesInventario,
+        actualizarPreciosProducto: true
+      });
+
+      alert('Producto e ingreso de inventario registrados exitosamente');
     } else if (modalMode.value === 'edit') {
+      const dataToSend = {
+        nombre: formData.value.nombre,
+        stock: formData.value.stock,
+        precioCosto: formData.value.precioCosto,
+        precioVenta: formData.value.precioVenta,
+        fechaAdquisicion: formData.value.fechaAdquisicion ? new Date(formData.value.fechaAdquisicion).toISOString() : null
+      };
       await axios.put(`/productos/${selectedProduct.value.id}`, dataToSend);
       alert('Producto actualizado exitosamente');
     }
@@ -616,6 +594,13 @@ watch(searchTerm, (newVal) => {
     }, 500);
 });
 
+watch(
+  () => [formData.value.precioCosto, formData.value.porcentajeGanancia, modalMode.value],
+  () => {
+    recalcularPrecioVenta();
+  }
+);
+
 // Agregar watch para items por página
 watch(itemsPerPage, () => {
   currentPage.value = 1;
@@ -631,16 +616,19 @@ const fetchProductos = async () => {
       limit: itemsPerPage.value,
       search: searchTerm.value || undefined
     };
-    
-    const response = await axios.get('/productos', { params });
-    
-    // El backend devuelve { data, totalItems, totalPages, currentPage }
+
+    let response;
+    try {
+      response = await axios.get('/inventario/resumen', { params });
+    } catch (inventarioError) {
+      response = await axios.get('/productos', { params });
+    }
+
     if (response.data.data) {
       productos.value = response.data.data || [];
       totalItems.value = response.data.totalItems || 0;
       totalPages.value = Math.max(1, response.data.totalPages || 1);
     } else if (Array.isArray(response.data)) {
-      // Fallback si el backend devuelve un array directamente
       productos.value = response.data;
       totalItems.value = productos.value.length;
       totalPages.value = Math.max(1, Math.ceil(totalItems.value / itemsPerPage.value));
@@ -668,7 +656,12 @@ const openCreateModal = () => {
     stock: 0,
     precioCosto: 0,
     precioVenta: 0,
-    fechaAdquisicion: ''
+    fechaAdquisicion: '',
+    ubicacionIngreso: 'ALMACEN',
+    porcentajeGanancia: 30,
+    documentoIngreso: '',
+    proveedor: '',
+    observacionesInventario: ''
   };
   showFormModal.value = true;
 };

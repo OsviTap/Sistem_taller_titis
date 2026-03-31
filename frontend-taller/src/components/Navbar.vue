@@ -1,8 +1,8 @@
 <template>
-  <nav class="fixed top-0 z-50 w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-    <div class="px-3 py-3 lg:px-5 lg:pl-3">
+  <nav class="fixed top-0 z-50 w-full border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+    <div class="h-16 px-3 py-3 lg:px-5 lg:pl-3">
       <div class="flex items-center justify-between">
-        <div class="flex items-center justify-start rtl:justify-end">
+        <div class="flex min-w-0 items-center justify-start rtl:justify-end">
           <button @click="$emit('toggle-sidebar')" aria-controls="logo-sidebar" type="button"
             class="inline-flex items-center p-2 text-sm text-gray-500 rounded-lg sm:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-600">
             <span class="sr-only">Open sidebar</span>
@@ -13,15 +13,15 @@
               </path>
             </svg>
           </button>
-          <a href="#" class="flex ms-2 md:me-24">
-            <img src="../../public/assets/images/logo.png" class="h-11 me-3" alt="Logo" />
-            <span class="self-center text-xl font-semibold sm:text-2xl whitespace-nowrap dark:text-white">Car Service
+          <a href="/dashboard" class="flex min-w-0 items-center ms-2 md:me-24">
+            <img src="/assets/images/logo.png" class="h-10 w-auto me-2" alt="Logo" />
+            <span class="hidden truncate self-center text-lg font-semibold text-gray-900 dark:text-white sm:block sm:text-xl lg:text-2xl">Car Service
               Titis</span>
           </a>
         </div>
-        <div class="flex items-center">
+        <div class="flex items-center gap-1 sm:gap-2">
           <!-- Boton para registro de caja chica -->
-          <button class="p-2">
+          <button class="hidden p-2 md:inline-flex">
             <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
               width="24" height="24" fill="none" viewBox="0 0 24 24">
               <path fill="currentColor" d="M4 19v2c0 .5523.44772 1 1 1h14c.5523 0 1-.4477 1-1v-2H4Z" />
@@ -45,7 +45,7 @@
                 fill-rule="evenodd" clip-rule="evenodd"></path>
             </svg>
           </button>
-          <div class="flex items-center ms-3">
+          <div class="flex items-center ms-1 sm:ms-3">
             <div>
               <button type="button"
                 class="flex text-sm bg-gray-800 rounded-full focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"

@@ -1,5 +1,5 @@
 <template>
-  <div class="relative overflow-x-auto shadow-md sm:rounded-lg m-4">
+  <div class="relative overflow-x-auto shadow-md sm:rounded-lg m-2 sm:m-4">
     <!-- Barra de búsqueda -->
     <div class="p-4 bg-white dark:bg-gray-800">
       <label for="table-search" class="sr-only">Search</label>
@@ -10,11 +10,11 @@
             <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path>
           </svg>
         </div>
-        <input v-model="searchTerm" type="text" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-80 pl-10 p-2.5" placeholder="Buscar marcas">
+        <input v-model="searchTerm" type="text" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full sm:w-80 pl-10 p-2.5" placeholder="Buscar marcas">
       </div>
     </div>
 
-    <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+    <table class="w-full min-w-[560px] text-sm text-left text-gray-500 dark:text-gray-400">
       <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
         <tr>
           <th 
@@ -65,8 +65,8 @@
     </table>
 
     <!-- Paginación -->
-    <div class="flex items-center justify-between p-4 bg-white">
-      <div class="flex items-center space-x-2">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-white">
+      <div class="flex items-center space-x-2 overflow-x-auto max-w-full pb-1">
         <button
           v-for="page in totalPages"
           :key="page"
@@ -87,8 +87,8 @@
     </div>
 
     <!-- Modal -->
-    <div v-if="showModal" class="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50">
-      <div class="bg-white p-6 rounded-lg shadow-lg w-96">
+    <div v-if="showModal" class="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 p-4">
+      <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
         <h3 class="text-lg font-semibold mb-4">{{ isEditing ? 'Editar Marca' : 'Agregar Marca' }}</h3>
         
         <div v-if="errorMessage" class="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">

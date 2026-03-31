@@ -15,6 +15,15 @@ const Usuario = require('./Usuario');
 const Vehiculo = require('./Vehiculo');
 const Visita = require('./Visita');
 const ProductHistory = require('./ProductHistory');
+const VentaDiaria = require('./VentaDiaria');
+const DetalleVentaDiaria = require('./DetalleVentaDiaria');
+const GastoDiario = require('./GastoDiario');
+const PlanillaRegistro = require('./PlanillaRegistro');
+const CajaTurno = require('./CajaTurno');
+const InventarioUbicacion = require('./InventarioUbicacion');
+const InventarioLote = require('./InventarioLote');
+const InventarioMovimiento = require('./InventarioMovimiento');
+const InventarioStockDiario = require('./InventarioStockDiario');
 
 
 // Configurar las relaciones
@@ -85,6 +94,86 @@ ProductHistory.belongsTo(Cliente, { foreignKey: 'clienteId' });
 ProductHistory.belongsTo(Vehiculo, { foreignKey: 'vehiculoId' });
 ProductHistory.belongsTo(Visita, { foreignKey: 'visitaId' });
 
+// Ventas diarias
+VentaDiaria.hasMany(DetalleVentaDiaria, {
+    foreignKey: 'ventaDiariaId',
+    as: 'detalles',
+    onDelete: 'CASCADE'
+});
+DetalleVentaDiaria.belongsTo(VentaDiaria, {
+    foreignKey: 'ventaDiariaId',
+    as: 'venta'
+});
+DetalleVentaDiaria.belongsTo(Producto, {
+    foreignKey: 'productoId',
+    as: 'producto',
+    constraints: false
+});
+
+// Inventario profesional (ubicaciones, lotes, movimientos, snapshots diarios)
+Producto.hasMany(InventarioLote, {
+    foreignKey: 'productoId',
+    as: 'lotesInventario'
+});
+InventarioLote.belongsTo(Producto, {
+    foreignKey: 'productoId',
+    as: 'producto'
+});
+
+InventarioUbicacion.hasMany(InventarioLote, {
+    foreignKey: 'ubicacionId',
+    as: 'lotes'
+});
+InventarioLote.belongsTo(InventarioUbicacion, {
+    foreignKey: 'ubicacionId',
+    as: 'ubicacion'
+});
+
+Producto.hasMany(InventarioMovimiento, {
+    foreignKey: 'productoId',
+    as: 'movimientosInventario'
+});
+InventarioMovimiento.belongsTo(Producto, {
+    foreignKey: 'productoId',
+    as: 'producto'
+});
+
+InventarioLote.hasMany(InventarioMovimiento, {
+    foreignKey: 'loteId',
+    as: 'movimientos'
+});
+InventarioMovimiento.belongsTo(InventarioLote, {
+    foreignKey: 'loteId',
+    as: 'lote'
+});
+
+InventarioMovimiento.belongsTo(InventarioUbicacion, {
+    foreignKey: 'ubicacionOrigenId',
+    as: 'ubicacionOrigen'
+});
+InventarioMovimiento.belongsTo(InventarioUbicacion, {
+    foreignKey: 'ubicacionDestinoId',
+    as: 'ubicacionDestino'
+});
+
+Producto.hasMany(InventarioStockDiario, {
+    foreignKey: 'productoId',
+    as: 'snapshotsInventario'
+});
+InventarioStockDiario.belongsTo(Producto, {
+    foreignKey: 'productoId',
+    as: 'producto'
+});
+
+InventarioUbicacion.hasMany(InventarioStockDiario, {
+    foreignKey: 'ubicacionId',
+    as: 'snapshotsInventario'
+});
+InventarioStockDiario.belongsTo(InventarioUbicacion, {
+    foreignKey: 'ubicacionId',
+    as: 'ubicacion'
+});
+
 
 // Marca y Modelo
 Marca.hasMany(Modelo, { 
@@ -146,6 +235,15 @@ module.exports = {
     Modelo,
     Producto,
     ProductHistory,
+    VentaDiaria,
+    DetalleVentaDiaria,
+    GastoDiario,
+    PlanillaRegistro,
+    CajaTurno,
+    InventarioUbicacion,
+    InventarioLote,
+    InventarioMovimiento,
+    InventarioStockDiario,
     Servicio,
     Usuario,
     Vehiculo,

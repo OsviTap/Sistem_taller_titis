@@ -5,7 +5,13 @@ const router = express.Router();
 // Crear un nuevo vehículo
 router.post('/', async (req, res) => {
     try {
-        const { clienteId, placa, marcaId, modeloId } = req.body;
+        const { clienteId, placa, marcaId, modeloId, anio } = req.body;
+
+        const anioNormalizado = parseInt(anio, 10);
+        const anioMaximo = new Date().getFullYear() + 1;
+        if (Number.isNaN(anioNormalizado) || anioNormalizado < 1900 || anioNormalizado > anioMaximo) {
+            return res.status(400).json({ error: `Año no válido. Debe estar entre 1900 y ${anioMaximo}` });
+        }
 
         // Verificar existencia de marca y modelo por ID
         const marca = await Marca.findByPk(marcaId);
@@ -15,7 +21,7 @@ router.post('/', async (req, res) => {
             return res.status(400).json({ error: 'Marca o modelo no válido' });
         }
 
-        const vehiculo = await Vehiculo.create({ clienteId, placa, marcaId, modeloId });
+        const vehiculo = await Vehiculo.create({ clienteId, placa, marcaId, modeloId, anio: anioNormalizado });
         res.status(201).json(vehiculo);
     } catch (err) {
         res.status(500).json({ error: 'Error al registrar vehículo', details: err.message });
@@ -39,25 +45,37 @@ router.get('/', async (req, res) => {
 // Actualizar un vehículo
 router.put('/:id', async (req, res) => {
     try {
-        const { clienteId, placa, marcaId, modeloId } = req.body;
+        const { clienteId, placa, marcaId, modeloId, anio } = req.body;
 
         const vehiculo = await Vehiculo.findByPk(req.params.id);
         if (!vehiculo) {
             return res.status(404).json({ error: 'Vehículo no encontrado' });
         }
 
+        const marcaObjetivo = marcaId ?? vehiculo.marcaId;
+        const modeloObjetivo = modeloId ?? vehiculo.modeloId;
+
         // Verificar que la marca y modelo existen
-        const marca = await Marca.findByPk(marcaId);
-        const modelo = await Modelo.findByPk(modeloId);
+        const marca = await Marca.findByPk(marcaObjetivo);
+        const modelo = await Modelo.findByPk(modeloObjetivo);
 
         if (!marca || !modelo) {
             return res.status(400).json({ error: 'Marca o modelo no válido' });
         }
 
-        vehiculo.clienteId = clienteId || vehiculo.clienteId;
-        vehiculo.placa = placa || vehiculo.placa;
-        vehiculo.marcaId = marcaId || vehiculo.marcaId;
-        vehiculo.modeloId = modeloId || vehiculo.modeloId;
+        if (anio !== undefined) {
+            const anioNormalizado = parseInt(anio, 10);
+            const anioMaximo = new Date().getFullYear() + 1;
+            if (Number.isNaN(anioNormalizado) || anioNormalizado < 1900 || anioNormalizado > anioMaximo) {
+                return res.status(400).json({ error: `Año no válido. Debe estar entre 1900 y ${anioMaximo}` });
+            }
+            vehiculo.anio = anioNormalizado;
+        }
+
+        vehiculo.clienteId = clienteId ?? vehiculo.clienteId;
+        vehiculo.placa = placa ?? vehiculo.placa;
+        vehiculo.marcaId = marcaObjetivo;
+        vehiculo.modeloId = modeloObjetivo;
 
         await vehiculo.save();
         res.json(vehiculo);

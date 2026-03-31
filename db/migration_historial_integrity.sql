@@ -120,6 +120,24 @@ PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
+-- Agregar anioVehiculo en historial_visitas
+SET @column_exists = (
+    SELECT COUNT(*) 
+    FROM INFORMATION_SCHEMA.COLUMNS 
+    WHERE TABLE_SCHEMA = DATABASE() 
+    AND TABLE_NAME = 'historial_visitas' 
+    AND COLUMN_NAME = 'anioVehiculo'
+);
+
+SET @sql = IF(@column_exists = 0, 
+    'ALTER TABLE historial_visitas ADD COLUMN anioVehiculo INT NULL AFTER modeloVehiculo',
+    'SELECT "Column anioVehiculo already exists in historial_visitas" AS Info'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
 
 -- ========================================
 -- 2. LLENAR SNAPSHOTS DE REGISTROS EXISTENTES
@@ -154,8 +172,9 @@ LEFT JOIN modelos mo ON v.modeloId = mo.id
 SET 
     hv.placaVehiculo = v.placa,
     hv.marcaVehiculo = m.nombre,
-    hv.modeloVehiculo = mo.nombre
-WHERE hv.placaVehiculo IS NULL;
+    hv.modeloVehiculo = mo.nombre,
+    hv.anioVehiculo = v.anio
+WHERE hv.placaVehiculo IS NULL OR hv.anioVehiculo IS NULL;
 
 -- Reactivar safe update mode
 SET SQL_SAFE_UPDATES = 1;

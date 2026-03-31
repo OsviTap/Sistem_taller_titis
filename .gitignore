@@ -1,0 +1,9 @@
+# Dependencias
+backend-taller/node_modules/
+frontend-taller/node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

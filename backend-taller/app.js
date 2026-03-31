@@ -34,6 +34,8 @@ const visitaRoutes = require('./routes/visitas');
 const cajaChicaRoutes = require('./routes/cajaChica');
 const detalleVisitasRouter = require('./routes/detalleVisitas');
 const historialProductosRouter = require('./routes/historialProductos');
+const ventasDiariasRouter = require('./routes/ventasDiarias');
+const inventarioRouter = require('./routes/inventario');
 
 
 // Sincronizar modelos y base de datos
@@ -80,6 +82,8 @@ app.use('/api/visitas', visitaRoutes);
 app.use('/api/caja-chica', cajaChicaRoutes);
 app.use('/api/detalle-visitas', detalleVisitasRouter);
 app.use('/api/historial-productos', historialProductosRouter);
+app.use('/api/ventas-diarias', ventasDiariasRouter);
+app.use('/api/inventario', inventarioRouter);
 
 // const io = require('socket.io')(server, {
 //     cors: {

@@ -116,16 +116,16 @@
   <!-- Modal: Última Visita -->
   <Teleport to="body">
     <div v-if="modalUltimaVisita" class="fixed inset-0 z-50 overflow-y-auto" @click="cerrarModalUltimaVisita">
-      <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+      <div class="flex min-h-screen items-center justify-center p-3 sm:p-4">
         <!-- Backdrop -->
         <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" aria-hidden="true"></div>
 
         <!-- Modal Panel -->
-        <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full" @click.stop>
+        <div class="w-full max-w-4xl bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all max-h-[90vh] flex flex-col" @click.stop>
           <!-- Header -->
           <div class="bg-gradient-to-r from-green-500 to-green-600 px-6 py-4">
             <div class="flex items-center justify-between">
-              <h3 class="text-xl font-bold text-white flex items-center">
+              <h3 class="text-base sm:text-xl font-bold text-white flex items-center">
                 <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>
@@ -140,7 +140,7 @@
           </div>
 
           <!-- Body -->
-          <div class="px-6 py-4 max-h-[70vh] overflow-y-auto">
+          <div class="px-4 sm:px-6 py-4 overflow-y-auto flex-1">
             <div v-if="cargandoDetalle" class="text-center py-8">
               <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-green-600"></div>
               <p class="mt-2 text-gray-600 dark:text-gray-400">Cargando información...</p>
@@ -169,6 +169,7 @@
                   </h4>
                   <p class="text-gray-900 dark:text-white font-medium">{{ formatVehiculo(detalleVisita.Vehiculo) }}</p>
                   <p class="text-sm text-gray-600 dark:text-gray-400">Placa: {{ detalleVisita.Vehiculo?.placa }}</p>
+                  <p class="text-sm text-gray-600 dark:text-gray-400">Año: {{ detalleVisita.Vehiculo?.anio || 'N/A' }}</p>
                 </div>
 
                 <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
@@ -188,7 +189,7 @@
                 <h4 class="text-lg font-semibold text-gray-900 dark:text-white border-b pb-2">Servicios y Productos</h4>
                 
                 <div class="overflow-x-auto">
-                  <table class="w-full text-sm">
+                  <table class="w-full min-w-[620px] text-sm">
                     <thead class="bg-gray-100 dark:bg-gray-700">
                       <tr>
                         <th class="px-4 py-2 text-left">Tipo</th>
@@ -234,7 +235,7 @@
           </div>
 
           <!-- Footer -->
-          <div class="bg-gray-50 dark:bg-gray-700 px-6 py-4 flex justify-between items-center">
+          <div class="bg-gray-50 dark:bg-gray-700 px-4 sm:px-6 py-4 flex flex-col sm:flex-row gap-3 sm:justify-between sm:items-center">
             <div v-if="vehiculoSeleccionado" class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -242,14 +243,14 @@
               <span>Al cerrar, volverás al historial</span>
             </div>
             <div v-else class="flex-1"></div>
-            <div class="flex gap-3">
-              <button v-if="!vehiculoSeleccionado" @click="irAHistorialCompleto(visitaSeleccionada)" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+            <div class="flex w-full sm:w-auto flex-col-reverse sm:flex-row gap-2 sm:gap-3">
+              <button v-if="!vehiculoSeleccionado" @click="irAHistorialCompleto(visitaSeleccionada)" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 w-full sm:w-auto">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
                 Ver Historial Completo
               </button>
-              <button @click="cerrarModalUltimaVisita" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 dark:hover:bg-gray-500 transition-colors">
+              <button @click="cerrarModalUltimaVisita" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 dark:hover:bg-gray-500 transition-colors w-full sm:w-auto">
                 {{ vehiculoSeleccionado ? 'Volver al Historial' : 'Cerrar' }}
               </button>
             </div>
@@ -262,16 +263,16 @@
   <!-- Modal: Historial Completo del Vehículo -->
   <Teleport to="body">
     <div v-if="modalHistorial" class="fixed inset-0 z-50 overflow-y-auto" @click="cerrarModalHistorial">
-      <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+      <div class="flex min-h-screen items-center justify-center p-3 sm:p-4">
         <!-- Backdrop -->
         <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" aria-hidden="true"></div>
 
         <!-- Modal Panel -->
-        <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full" @click.stop>
+        <div class="w-full max-w-6xl bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all max-h-[90vh] flex flex-col" @click.stop>
           <!-- Header -->
           <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
             <div class="flex items-center justify-between">
-              <h3 class="text-xl font-bold text-white flex items-center">
+              <h3 class="text-base sm:text-xl font-bold text-white flex items-center">
                 <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
@@ -286,7 +287,7 @@
           </div>
 
           <!-- Body -->
-          <div class="px-6 py-4 max-h-[75vh] overflow-y-auto">
+          <div class="px-4 sm:px-6 py-4 overflow-y-auto flex-1">
             <div v-if="cargandoHistorial" class="text-center py-8">
               <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-blue-600"></div>
               <p class="mt-2 text-gray-600 dark:text-gray-400">Cargando historial...</p>
@@ -295,7 +296,7 @@
             <div v-else-if="historialVehiculo.length > 0">
               <!-- Info del Vehículo -->
               <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mb-6">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
                     <p class="text-sm text-gray-600 dark:text-gray-400">Cliente</p>
                     <p class="font-semibold text-gray-900 dark:text-white">{{ vehiculoSeleccionado?.Cliente?.nombre }}</p>
@@ -307,6 +308,10 @@
                   <div>
                     <p class="text-sm text-gray-600 dark:text-gray-400">Placa</p>
                     <p class="font-semibold text-gray-900 dark:text-white">{{ vehiculoSeleccionado?.Vehiculo?.placa }}</p>
+                  </div>
+                  <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Año</p>
+                    <p class="font-semibold text-gray-900 dark:text-white">{{ vehiculoSeleccionado?.Vehiculo?.anio || 'N/A' }}</p>
                   </div>
                 </div>
                 <div class="mt-3 flex items-center text-sm text-gray-700 dark:text-gray-300">
@@ -332,7 +337,7 @@
                     <!-- Visita Card -->
                     <div class="flex-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm hover:shadow-md transition-shadow">
                       <div class="p-4">
-                        <div class="flex justify-between items-start mb-3">
+                        <div class="flex flex-col sm:flex-row justify-between items-start gap-2 mb-3">
                           <div class="flex-1">
                             <p class="font-semibold text-gray-900 dark:text-white">{{ formatDate(visita.fecha) }}</p>
                             <p class="text-sm text-gray-600 dark:text-gray-400">Km: {{ visita.kilometraje?.toLocaleString() }} → Próximo: {{ visita.proximoCambio?.toLocaleString() }}</p>
@@ -378,8 +383,8 @@
           </div>
 
           <!-- Footer -->
-          <div class="bg-gray-50 dark:bg-gray-700 px-6 py-4 flex justify-end">
-            <button @click="cerrarModalHistorial" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 dark:hover:bg-gray-500 transition-colors">
+          <div class="bg-gray-50 dark:bg-gray-700 px-4 sm:px-6 py-4 flex justify-end">
+            <button @click="cerrarModalHistorial" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 dark:hover:bg-gray-500 transition-colors w-full sm:w-auto">
               Cerrar
             </button>
           </div>
@@ -427,7 +432,8 @@ export default {
 
     const formatVehiculo = (vehiculo) => {
       if (!vehiculo) return 'N/A';
-      return `${vehiculo.marcaVehiculo?.nombre || ''} ${vehiculo.modeloVehiculo?.nombre || ''}`.trim();
+      const base = `${vehiculo.marcaVehiculo?.nombre || ''} ${vehiculo.modeloVehiculo?.nombre || ''}`.trim();
+      return vehiculo.anio ? `${base} (${vehiculo.anio})` : base;
     };
 
     const formatDate = (date) => {

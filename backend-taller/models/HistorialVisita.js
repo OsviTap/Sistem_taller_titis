@@ -54,6 +54,11 @@ const HistorialVisita = sequelize.define('HistorialVisita', {
         type: DataTypes.STRING,
         allowNull: true,
         comment: 'Snapshot del modelo del vehículo al momento de la visita'
+    },
+    anioVehiculo: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        comment: 'Snapshot del año del vehículo al momento de la visita'
     }
 }, { 
     tableName: 'historial_visitas', 

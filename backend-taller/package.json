@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "node ./bin/www",
-    "start": "node ./bin/www"
-    
+    "start": "node ./bin/www",
+    "migrate:inventario": "node ./scripts/run_migration_inventario_profesional.js",
+    "seed:inventario-inicial": "node ./scripts/seed_inventario_inicial.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.47.10",
@@ -17,6 +18,7 @@
     "dotenv": "^16.4.7",
     "express": "~4.16.1",
     "fs": "^0.0.1-security",
+    "googleapis": "^171.4.0",
     "jsonwebtoken": "^9.0.2",
     "morgan": "~1.9.1",
     "mysql2": "^3.11.5",

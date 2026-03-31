@@ -2,7 +2,7 @@
   <div>
     <div class="bg-white dark:bg-gray-800 relative shadow-md sm:rounded-lg">
       <!-- Barra de búsqueda y selector de páginas -->
-      <div class="flex flex-col md:flex-row items-center justify-between space-y-3 md:space-y-0 md:space-x-4 p-4">
+      <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between space-y-3 md:space-y-0 md:space-x-4 p-4">
         <!-- Búsqueda -->
         <div class="w-full md:w-1/2">
           <div class="relative">
@@ -37,13 +37,13 @@
 
       <!-- Tabla -->
       <div class="overflow-x-auto">
-        <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+        <table class="w-full min-w-[1080px] text-sm text-left text-gray-500 dark:text-gray-400">
           <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
             <tr>
               <!-- Grupo: Datos de Usuario -->
               <th colspan="4" class="px-6 py-3 text-center border-b">Datos de Usuario</th>
               <!-- Grupo: Vehículo -->
-              <th colspan="3" class="px-6 py-3 text-center border-b">Vehículo</th>
+              <th colspan="4" class="px-6 py-3 text-center border-b">Vehículo</th>
               <th class="px-6 py-3 border-b">Acciones</th>
             </tr>
             <tr>
@@ -101,6 +101,9 @@
               <td class="px-6 py-4">
                   {{ cliente.Vehiculos?.[0]?.modeloVehiculo?.nombre || '-' }}
               </td>
+                <td class="px-6 py-4">
+                  {{ cliente.Vehiculos?.[0]?.anio || '-' }}
+                </td>
               <td class="px-6 py-4">
                   {{ cliente.Vehiculos?.[0]?.placa || '-' }}
               </td>
@@ -132,14 +135,14 @@
       </div>
 
       <!-- Paginación -->
-      <nav class="flex flex-col md:flex-row justify-between items-center space-y-3 md:space-y-0 p-4">
+      <nav class="flex flex-col md:flex-row justify-between items-start md:items-center space-y-3 md:space-y-0 p-4">
         <span class="text-sm font-normal text-gray-500 dark:text-gray-400">
           Mostrando 
           <span class="font-semibold text-gray-900 dark:text-white">{{ startIndex + 1 }}-{{ Math.min(endIndex, totalItems) }}</span>
           de
           <span class="font-semibold text-gray-900 dark:text-white">{{ totalItems }}</span>
         </span>
-        <ul class="inline-flex items-stretch -space-x-px">
+        <ul class="inline-flex items-stretch -space-x-px overflow-x-auto max-w-full pb-1">
           <li>
             <button
               @click="previousPage"
@@ -195,9 +198,9 @@
       <div class="flex items-center justify-center min-h-screen p-4">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
         
-        <div class="relative bg-white rounded-lg shadow-xl max-w-4xl w-full">
+        <div class="relative bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
           <div class="flex items-start justify-between p-4 border-b">
-            <h3 class="text-xl font-semibold">
+            <h3 class="text-lg sm:text-xl font-semibold">
               {{ modalMode === 'create' ? 'Registrar Cliente' : 
                  modalMode === 'edit' ? 'Editar Cliente' : 'Ver Cliente' }}
             </h3>
@@ -213,7 +216,7 @@
               <!-- Sección de datos del cliente -->
               <div class="mb-6">
                 <h4 class="text-lg font-medium mb-4">Datos del Cliente</h4>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label class="block text-sm font-medium text-gray-700">Nombre</label>
                     <input 
@@ -274,7 +277,7 @@
                 </div>
 
                 <div v-for="(vehiculo, index) in formData.vehiculos" :key="index" class="mb-4 p-4 border rounded-md relative">
-                  <div class="grid grid-cols-3 gap-4">
+                  <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
                       <label class="block text-sm font-medium text-gray-700">Marca</label>
                       <select
@@ -310,6 +313,18 @@
                         type="text"
                         v-model="vehiculo.placa"
                         :disabled="modalMode === 'view'"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      >
+                    </div>
+
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700">Año</label>
+                      <input
+                        type="number"
+                        v-model="vehiculo.anio"
+                        :disabled="modalMode === 'view'"
+                        min="1900"
+                        :max="currentYearMax"
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                       >
                     </div>
@@ -370,6 +385,7 @@ const sortColumn = ref('nombre');
 const sortDirection = ref('asc');
 const selectedClienteId = ref(null);
 const isLoading = ref(false);
+const currentYearMax = new Date().getFullYear() + 1;
 
 const marcas = ref([]);
 const modelosPorMarca = ref([]);
@@ -382,7 +398,8 @@ const formData = ref({
   vehiculos: [{
     marcaId: '',
     modeloId: '',
-    placa: ''
+    placa: '',
+    anio: ''
   }]
 });
 
@@ -397,6 +414,7 @@ const userColumns = [
 const vehicleColumns = [
   { key: 'marca', label: 'Marca' },
   { key: 'modelo', label: 'Modelo' },
+  { key: 'anio', label: 'Año' },
   { key: 'placa', label: 'Placa' }
 ];
 
@@ -438,7 +456,8 @@ const addVehicle = () => {
   formData.value.vehiculos.push({
     marcaId: '',
     modeloId: '',
-    placa: ''
+    placa: '',
+    anio: ''
   });
   modelosPorMarca.value.push([]);
 };
@@ -545,7 +564,8 @@ const loadClientes = async () => {
                 modelo: v.modeloVehiculo?.nombre || '',
                 marcaId: v.marcaId,
                 modeloId: v.modeloId,
-                placa: v.placa || ''
+                placa: v.placa || '',
+                anio: v.anio || ''
             })) || []
         }));
         
@@ -607,7 +627,8 @@ const openCreateModal = () => {
     vehiculos: [{
       marcaId: '',
       modeloId: '',
-      placa: ''
+      placa: '',
+      anio: ''
     }]
   };
   modelosPorMarca.value = [[]];
@@ -621,11 +642,13 @@ const openViewModal = async (cliente) => {
     const vehiculos = cliente.Vehiculos?.map(v => ({
         marcaId: v.marcaId,
         modeloId: v.modeloId,
-        placa: v.placa
+      placa: v.placa,
+      anio: v.anio || ''
     })) || [{
         marcaId: '',
         modeloId: '',
-        placa: ''
+      placa: '',
+      anio: ''
     }];
 
     formData.value = {
@@ -653,11 +676,13 @@ const openEditModal = async (cliente) => {
     const vehiculos = cliente.Vehiculos?.map(v => ({
         marcaId: v.marcaId,
         modeloId: v.modeloId,
-        placa: v.placa
+      placa: v.placa,
+      anio: v.anio || ''
     })) || [{
         marcaId: '',
         modeloId: '',
-        placa: ''
+      placa: '',
+      anio: ''
     }];
 
     formData.value = {
@@ -688,7 +713,8 @@ const closeModal = () => {
     vehiculos: [{
       marcaId: '',
       modeloId: '',
-      placa: ''
+      placa: '',
+      anio: ''
     }]
   };
   modelosPorMarca.value = [[]];
@@ -704,12 +730,14 @@ const handleSubmit = async () => {
         }
 
         // Validar que los vehículos tengan los datos necesarios
-        const vehiculosValidos = formData.value.vehiculos.every(v => 
-            v.marcaId && v.modeloId && v.placa
-        );
+        const anioMaximo = currentYearMax;
+        const vehiculosValidos = formData.value.vehiculos.every(v => {
+          const anio = parseInt(v.anio, 10);
+          return v.marcaId && v.modeloId && v.placa && !Number.isNaN(anio) && anio >= 1900 && anio <= anioMaximo;
+        });
 
         if (!vehiculosValidos) {
-            alert('Por favor complete todos los datos del vehículo');
+          alert(`Por favor complete todos los datos del vehículo y verifique que el año esté entre 1900 y ${anioMaximo}`);
             return;
         }
 
@@ -721,7 +749,8 @@ const handleSubmit = async () => {
             Vehiculos: formData.value.vehiculos.map(v => ({
                 marcaId: parseInt(v.marcaId),    // Asegurarse de que sean números
                 modeloId: parseInt(v.modeloId),  // Asegurarse de que sean números
-                placa: v.placa
+              placa: v.placa,
+              anio: parseInt(v.anio, 10)
             }))
         };
 

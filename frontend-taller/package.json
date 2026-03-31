@@ -20,7 +20,8 @@
     "sweetalert2": "^11.26.3",
     "vue": "^3.5.13",
     "vue-axios": "^3.5.2",
-    "vue-router": "^4.4.5"
+    "vue-router": "^4.4.5",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.2.1",

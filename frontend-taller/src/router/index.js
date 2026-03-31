@@ -60,6 +60,18 @@ const router = createRouter({
         component: () => import('@/views/HistorialProductosView.vue'),
         meta: { requiresAuth: true },
       },
+    {
+      path: '/ventas-diarias',
+      name: 'ventas-diarias',
+      component: () => import('../views/VentasDiariasView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/inventario-control',
+      name: 'inventario-control',
+      component: () => import('../views/InventarioControlView.vue'),
+      meta: { requiresAuth: true },
+    },
     
   ],
 })

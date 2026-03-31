@@ -57,6 +57,9 @@ ALTER TABLE vehiculos ADD INDEX idx_estado (estado);
 -- Índice compuesto cliente + estado (para obtener vehículos activos de un cliente)
 ALTER TABLE vehiculos ADD INDEX idx_clienteId_estado (clienteId, estado);
 
+-- Optimiza búsquedas y filtros por año del vehículo
+ALTER TABLE vehiculos ADD INDEX idx_anio (anio);
+
 
 -- ========================================
 -- ÍNDICES PARA TABLA clientes

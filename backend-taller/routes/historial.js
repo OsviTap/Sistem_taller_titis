@@ -101,7 +101,8 @@ router.get('/', async (req, res) => {
         if (search) {
             whereClause[Sequelize.Op.or] = [
                 { '$Cliente.nombre$': { [Sequelize.Op.like]: `%${search}%` } },
-                { '$Vehiculo.placa$': { [Sequelize.Op.like]: `%${search}%` } }
+                { '$Vehiculo.placa$': { [Sequelize.Op.like]: `%${search}%` } },
+                Sequelize.where(Sequelize.cast(Sequelize.col('Vehiculo.anio'), 'CHAR'), { [Sequelize.Op.like]: `%${search}%` })
             ];
         }
 
@@ -126,7 +127,7 @@ router.get('/', async (req, res) => {
                             attributes: ['nombre']
                         }
                     ],
-                    attributes: ['placa']
+                    attributes: ['placa', 'anio']
                 },
                 {
                     model: Visita,

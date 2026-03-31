@@ -2,6 +2,7 @@ const express = require('express');
 const { Visita, DetalleVisita, Cliente, Vehiculo, Producto, HistorialVisita, Marca, Modelo } = require('../models');
 const router = express.Router();
 const { sequelize } = require('../models');
+const { registrarSalidaInventarioFIFO } = require('../services/inventarioService');
 
 // Obtener todas las visitas
 // Obtener todas las visitas con paginación
@@ -41,6 +42,7 @@ router.get('/', async (req, res) => {
                 { '$Vehiculo.placa$': { [Op.like]: `%${platePattern}%` } },
                 { '$Vehiculo.marcaVehiculo.nombre$': { [Op.like]: `%${term}%` } },
                 { '$Vehiculo.modeloVehiculo.nombre$': { [Op.like]: `%${term}%` } },
+                sequelize.where(sequelize.cast(sequelize.col('Vehiculo.anio'), 'CHAR'), { [Op.like]: `%${term}%` }),
                 { tipoPago: { [Op.like]: `%${term}%` } },
                 sequelize.where(sequelize.cast(sequelize.col('Visita.kilometraje'), 'CHAR'), { [Op.like]: `%${term}%` }),
                 sequelize.where(sequelize.cast(sequelize.col('Visita.proximoCambio'), 'CHAR'), { [Op.like]: `%${term}%` }),
@@ -152,6 +154,16 @@ router.post('/', async (req, res) => {
                         if (nuevoStock < 0) {
                             throw new Error(`Stock insuficiente para el producto ${producto.nombre}`);
                         }
+
+                        await registrarSalidaInventarioFIFO({
+                            productoId: producto.id,
+                            cantidad: detalle.cantidad,
+                            referenciaTipo: 'VISITA',
+                            referenciaId: visita.id,
+                            observaciones: `Salida por visita ${visita.id}`,
+                            transaction: t,
+                        });
+
                         await producto.update({ stock: nuevoStock }, { transaction: t });
                     }
                 } else if (detalle.tipo === 'Servicio') {
@@ -200,7 +212,8 @@ router.post('/', async (req, res) => {
             nombreCliente: cliente ? cliente.nombre : null,
             placaVehiculo: vehiculo ? vehiculo.placa : null,
             marcaVehiculo: vehiculo && vehiculo.marcaVehiculo ? vehiculo.marcaVehiculo.nombre : null,
-            modeloVehiculo: vehiculo && vehiculo.modeloVehiculo ? vehiculo.modeloVehiculo.nombre : null
+            modeloVehiculo: vehiculo && vehiculo.modeloVehiculo ? vehiculo.modeloVehiculo.nombre : null,
+            anioVehiculo: vehiculo ? vehiculo.anio : null
         }, { transaction: t });
 
         // 4. Confirmar la transacción
@@ -241,7 +254,7 @@ router.get('/:id', async (req, res) => {
                 },
                 {
                     model: Vehiculo,
-                    attributes: ['id', 'placa'],
+                    attributes: ['id', 'placa', 'anio'],
                     include: [
                         {
                             model: Marca,

@@ -1,7 +1,7 @@
 <template>
-    <div class="p-6">
+    <div class="p-4 sm:p-6">
       <!-- Header -->
-      <h1 class="text-2xl font-bold text-gray-800 dark:text-white mb-6">Registro de Visita</h1>
+      <h1 class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white mb-6">Registro de Visita</h1>
   
       <!-- Formulario -->
       <form @submit.prevent="guardarVisita">
@@ -74,7 +74,7 @@
               <option v-for="vehiculo in vehiculosFiltrados" 
                       :key="vehiculo.id" 
                       :value="vehiculo.id">
-                {{ vehiculo.marcaVehiculo?.nombre }} - {{ vehiculo.modeloVehiculo?.nombre }} - {{ vehiculo.placa }}
+                {{ vehiculo.marcaVehiculo?.nombre }} - {{ vehiculo.modeloVehiculo?.nombre }} ({{ vehiculo.anio || 'S/A' }}) - {{ vehiculo.placa }}
               </option>
             </select>
           </div>
@@ -184,11 +184,11 @@
                   </ul>
                 </div>
                 <!-- Cantidad del producto -->
-                <div v-if="productoSeleccionado" class="flex gap-2">
+                <div v-if="productoSeleccionado" class="flex flex-col sm:flex-row gap-2">
                   <input 
                     type="number"
                     v-model.number="cantidadProducto"
-                    class="input-text w-24"
+                    class="input-text w-full sm:w-24"
                     min="1"
                     :max="productoSeleccionado.stock"
                     placeholder="Cant."
@@ -209,8 +209,8 @@
           </div>
   
           <!-- Lista Unificada de Detalles -->
-          <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
-            <table class="table-auto w-full text-sm text-left text-gray-500 dark:text-gray-400">
+          <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-x-auto">
+            <table class="table-auto w-full min-w-[760px] text-sm text-left text-gray-500 dark:text-gray-400">
               <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                 <tr>
                   <th scope="col" class="px-6 py-3">Tipo</th>
@@ -256,7 +256,7 @@
           </div>
   
           <!-- Total -->
-          <div class="flex justify-end mt-6 space-x-4">
+            <div class="flex justify-start sm:justify-end mt-6">
               <div class="text-right">
                   <p class="text-gray-600 dark:text-gray-400">Subtotal: Bs {{ subtotal.toFixed(2) }}</p>
                   <p class="text-gray-600 dark:text-gray-400">Descuento: Bs {{ Number(descuento).toFixed(2) }}</p>
@@ -267,9 +267,9 @@
           </div>
   
         <!-- Botones -->
-        <div class="flex justify-end gap-4 mt-6">
-          <button type="button" @click="generarDocumento" class="btn-secondary">Imprimir</button>
-          <button type="submit" class="btn-primary">Guardar</button>
+        <div class="flex flex-col-reverse sm:flex-row justify-end gap-3 sm:gap-4 mt-6">
+          <button type="button" @click="generarDocumento" class="btn-secondary w-full sm:w-auto">Imprimir</button>
+          <button type="submit" class="btn-primary w-full sm:w-auto">Guardar</button>
         </div>
         </div>
       </form>
@@ -700,8 +700,9 @@ const generarPDF = async (visitaData, clienteData, vehiculoData, detallesComplet
             doc.text(`PLACA N°: ${vehiculoData.placa}`, 110, 62);
             doc.text(`MARCA: ${vehiculoData.marcaVehiculo?.nombre || 'N/A'}`, 110, 67);
             doc.text(`MODELO: ${vehiculoData.modeloVehiculo?.nombre || 'N/A'}`, 110, 72);
-            doc.text(`KM. ACTUAL: ${visitaData.kilometraje}`, 110, 77);
-            doc.text(`PRÓXIMO CAMBIO: ${visitaData.proximoCambio}`, 110, 82);
+            doc.text(`AÑO: ${vehiculoData.anio || 'N/A'}`, 110, 77);
+            doc.text(`KM. ACTUAL: ${visitaData.kilometraje}`, 110, 82);
+            doc.text(`PRÓXIMO CAMBIO: ${visitaData.proximoCambio}`, 110, 87);
 
             // Tabla de detalles
             const headers = ['CÓD.', 'PRODUCTO/SERVICIO', 'CANT.', 'PRECIO UNIT.', 'SUB-TOTAL'];

@@ -34,6 +34,14 @@ const Vehiculo = sequelize.define('Vehiculo', {
             key: 'id',
         },
     },
+    anio: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        validate: {
+            min: 1900,
+            max: new Date().getFullYear() + 1,
+        },
+    },
     placa: {
         type: DataTypes.STRING,
         allowNull: false,

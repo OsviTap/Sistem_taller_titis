@@ -1,11 +1,11 @@
 <template>
-  <div class="p-6">
+  <div class="p-4 sm:p-6">
     <!-- Header -->
     <div class="mb-6">
-      <h1 class="text-2xl font-bold text-gray-800 dark:text-white mb-4">Historial de Visitas</h1>
+      <h1 class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white mb-4">Historial de Visitas</h1>
       
       <!-- Barra de búsqueda y selector de items -->
-      <div class="flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
+      <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-4">
         <!-- Búsqueda -->
         <div class="w-full md:w-1/2 relative">
           <div class="relative">
@@ -55,7 +55,7 @@
       
       <!-- Filtros avanzados -->
       <div class="flex flex-wrap gap-4 items-end">
-        <div class="w-64">
+        <div class="w-full sm:w-64">
           <label for="clienteFilter" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cliente</label>
           <select v-model="clienteFilter" id="clienteFilter" class="input-select">
             <option value="">Todos los clientes</option>
@@ -64,7 +64,7 @@
             </option>
           </select>
         </div>
-        <div class="w-40">
+        <div class="w-full sm:w-40">
           <label for="fechaInicio" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha Inicio</label>
           <input 
             type="date" 
@@ -74,7 +74,7 @@
             :max="fechaFin || undefined"
           />
         </div>
-        <div class="w-40">
+        <div class="w-full sm:w-40">
           <label for="fechaFin" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha Fin</label>
           <input 
             type="date" 
@@ -84,17 +84,17 @@
             :min="fechaInicio || undefined"
           />
         </div>
-        <div class="flex gap-2">
+        <div class="flex w-full sm:w-auto gap-2">
           <button 
             @click="aplicarFiltros" 
-            class="btn-primary"
+            class="btn-primary w-full sm:w-auto"
             title="Aplicar filtros"
           >
             Filtrar
           </button>
           <button 
             @click="limpiarFiltros" 
-            class="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 border border-gray-300 rounded-lg bg-white dark:bg-gray-700 dark:border-gray-600"
+            class="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 border border-gray-300 rounded-lg bg-white dark:bg-gray-700 dark:border-gray-600 w-full sm:w-auto"
             title="Limpiar filtros"
           >
             Limpiar
@@ -126,7 +126,7 @@
 
       <!-- Tabla -->
       <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
-      <table id="historialTable" class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+      <table id="historialTable" class="w-full min-w-[860px] text-sm text-left text-gray-500 dark:text-gray-400">
         <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
           <tr>
             <th scope="col" class="px-6 py-3">Fecha</th>
@@ -148,16 +148,19 @@
           <tr v-else v-for="visita in visitas" :key="visita.id" class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
             <td class="px-6 py-4">{{ formatDate(visita.fecha) }}</td>
             <td class="px-6 py-4">{{ visita.Cliente?.nombre || 'Sin Cliente' }}</td>
-            <td class="px-6 py-4">{{ visita.Vehiculo?.placa || 'Sin Vehículo' }}</td>
+            <td class="px-6 py-4">
+              <div>{{ visita.Vehiculo?.placa || 'Sin Vehículo' }}</div>
+              <div class="text-xs text-gray-500">Año: {{ visita.Vehiculo?.anio || 'N/A' }}</div>
+            </td>
             <td class="px-6 py-4">{{ visita.kilometraje }} km</td>
             <td class="px-6 py-4">{{ visita.proximoCambio }} km</td>
             <td class="px-6 py-4">Bs {{ visita.total }}</td>
             <td class="px-6 py-4">
-              <div class="flex space-x-2">
-                <button @click="generarPDF(visita)" class="btn-primary">Ver</button>
+              <div class="flex flex-col sm:flex-row gap-2">
+                <button @click="generarPDF(visita)" class="btn-primary whitespace-nowrap">Ver</button>
                 <button 
                   @click="eliminarVisita(visita.id)"
-                  class="text-red-600 hover:text-red-900 font-medium"
+                  class="text-red-600 hover:text-red-900 font-medium text-left sm:text-center"
                 >
                   Eliminar
                 </button>
@@ -169,14 +172,14 @@
     </div>
 
     <!-- Paginación inteligente -->
-    <nav class="flex flex-col md:flex-row justify-between items-center space-y-3 md:space-y-0 p-4" v-if="totalItems > 0">
+    <nav class="flex flex-col md:flex-row justify-between items-start md:items-center space-y-3 md:space-y-0 p-4" v-if="totalItems > 0">
       <span class="text-sm font-normal text-gray-500 dark:text-gray-400">
         Mostrando 
         <span class="font-semibold text-gray-900 dark:text-white">{{ startIndex + 1 }}-{{ Math.min(endIndex, totalItems) }}</span>
         de
         <span class="font-semibold text-gray-900 dark:text-white">{{ totalItems }}</span>
       </span>
-      <ul class="inline-flex items-stretch -space-x-px">
+      <ul class="inline-flex items-stretch -space-x-px overflow-x-auto max-w-full pb-1">
         <li>
           <button
             @click="previousPage"
@@ -523,8 +526,9 @@ const generarPDF = async (visita) => {
     doc.text(`PLACA N°: ${visita.Vehiculo?.placa || 'N/A'}`, 110, 62);
     doc.text(`MARCA: ${visita.Vehiculo?.marcaVehiculo?.nombre || 'N/A'}`, 110, 67);
     doc.text(`MODELO: ${visita.Vehiculo?.modeloVehiculo?.nombre || 'N/A'}`, 110, 72);
-    doc.text(`KM. ACTUAL: ${visita.kilometraje || 0}`, 110, 77);
-    doc.text(`PRÓXIMO CAMBIO: ${visita.proximoCambio || 0}`, 110, 82);
+    doc.text(`AÑO: ${visita.Vehiculo?.anio || 'N/A'}`, 110, 77);
+    doc.text(`KM. ACTUAL: ${visita.kilometraje || 0}`, 110, 82);
+    doc.text(`PRÓXIMO CAMBIO: ${visita.proximoCambio || 0}`, 110, 87);
 
     // Tabla de detalles
     const headers = ['CÓD.', 'PRODUCTO/SERVICIO', 'CANT.', 'PRECIO UNIT.', 'SUB-TOTAL'];

@@ -1,6 +1,6 @@
 <template>
-    <div class="flex items-center justify-center min-h-screen bg-gray-100">
-      <div class="bg-white p-8 rounded-lg shadow-md w-96">
+    <div class="flex min-h-screen items-center justify-center bg-gray-100 p-4 sm:p-6">
+      <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-md sm:p-8">
         <h1 class="text-2xl font-bold mb-6 text-center">Iniciar Sesión</h1>
         <form @submit.prevent="login">
           <div class="mb-5">

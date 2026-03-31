@@ -9,8 +9,21 @@ const {
     GastoDiario,
     PlanillaRegistro,
     CajaTurno,
+    GoogleSheetsImportExtra,
 } = require('../models');
 const { registrarSalidaInventarioFIFO } = require('../services/inventarioService');
+const { getBoliviaDateString, getBoliviaCurrentTurno } = require('../utils/datetimeBolivia');
+const {
+    DEFAULT_IMPORT_SHEETS,
+    getExpectedFieldsSpec,
+    normalizeSheetsToImport,
+    previewImportGoogleSheets,
+    runImportGoogleSheets,
+} = require('../services/googleSheetsImportService');
+const {
+    ejecutarImportSiCorresponde,
+    getGoogleSheetsImportSchedulerStatus,
+} = require('../services/googleSheetsImportSchedulerService');
 
 const router = express.Router();
 
@@ -40,6 +53,70 @@ const buildMonthRange = (year, month) => {
 };
 
 const toRows = (records) => records.map((item) => item.toJSON ? item.toJSON() : item);
+
+const normalizarFechaOperativa = (fechaInput) => {
+    if (!fechaInput) return getBoliviaDateString();
+    return String(fechaInput).slice(0, 10);
+};
+
+const nextNumeroVenta = async ({ fechaVenta, transaction }) => {
+    const prefijo = `VD-${String(fechaVenta).replace(/-/g, '')}-`;
+    const existentes = await VentaDiaria.findAll({
+        where: {
+            fecha: fechaVenta,
+            numeroVenta: { [Op.like]: `${prefijo}%` },
+        },
+        attributes: ['numeroVenta'],
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+        raw: true,
+    });
+
+    let maxSecuencia = 0;
+    for (const item of existentes) {
+        const numero = String(item.numeroVenta || '');
+        const match = numero.match(/-(\d+)$/);
+        if (match) {
+            const secuencia = parseInt(match[1], 10);
+            if (!Number.isNaN(secuencia) && secuencia > maxSecuencia) {
+                maxSecuencia = secuencia;
+            }
+        }
+    }
+
+    const secuencia = maxSecuencia + 1;
+    return {
+        numeroVenta: `${prefijo}${String(secuencia).padStart(4, '0')}`,
+        secuencia,
+    };
+};
+
+const ensureCajaTurnoAutomatico = async ({ fechaVenta, transaction }) => {
+    const fechaHoyBolivia = getBoliviaDateString();
+    const turno = fechaVenta === fechaHoyBolivia ? getBoliviaCurrentTurno() : 'Manana';
+
+    const turnoExistente = await CajaTurno.findOne({
+        where: {
+            fecha: fechaVenta,
+            turno,
+            estado: 'ABIERTO',
+        },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+    });
+
+    if (turnoExistente) {
+        return turnoExistente;
+    }
+
+    return CajaTurno.create({
+        fecha: fechaVenta,
+        turno,
+        responsable: 'AUTO-SISTEMA',
+        saldoInicial: 0,
+        observaciones: 'Apertura automática por movimiento operativo.',
+    }, { transaction });
+};
 
 const getTopProductos = async (fechaInicio, fechaFin) => {
     const whereVenta = { estado: 1, fecha: { [Op.between]: [fechaInicio, fechaFin] } };
@@ -172,10 +249,34 @@ router.post('/ventas', async (req, res) => {
             return res.status(400).json({ error: 'Debe agregar al menos un producto.' });
         }
 
+        const fechaVenta = normalizarFechaOperativa(fecha);
+
+        let numeroVentaFinal = String(numeroVenta || '').trim();
+        if (!numeroVentaFinal) {
+            const generated = await nextNumeroVenta({ fechaVenta, transaction: t });
+            numeroVentaFinal = generated.numeroVenta;
+        } else {
+            const duplicado = await VentaDiaria.findOne({
+                where: {
+                    fecha: fechaVenta,
+                    numeroVenta: numeroVentaFinal,
+                    estado: 1,
+                },
+                transaction: t,
+                lock: t.LOCK.UPDATE,
+            });
+
+            if (duplicado) {
+                throw new Error(`El número de venta ${numeroVentaFinal} ya existe para ${fechaVenta}`);
+            }
+        }
+
+        await ensureCajaTurnoAutomatico({ fechaVenta, transaction: t });
+
         const descuentoNum = Number(descuento || 0);
         const venta = await VentaDiaria.create({
-            fecha: fecha || new Date(),
-            numeroVenta,
+            fecha: fechaVenta,
+            numeroVenta: numeroVentaFinal,
             clienteNombre,
             metodoPago: metodoPago || 'Efectivo',
             subtotal: 0,
@@ -204,21 +305,30 @@ router.post('/ventas', async (req, res) => {
             }
 
             const precioUnitario = Number(item.precioUnitario ?? producto.precioVenta);
-            const costoUnitario = Number(producto.precioCosto || 0);
             const subtotalItem = precioUnitario * cantidad;
-            const gananciaItem = (precioUnitario - costoUnitario) * cantidad;
 
             subtotal += subtotalItem;
-            totalGanancia += gananciaItem;
 
-            await registrarSalidaInventarioFIFO({
+            const salidaFIFO = await registrarSalidaInventarioFIFO({
                 productoId: producto.id,
                 cantidad,
                 referenciaTipo: 'VENTA_DIARIA',
                 referenciaId: venta.id,
-                observaciones: numeroVenta || observaciones || null,
+                observaciones: numeroVentaFinal || observaciones || null,
                 transaction: t,
             });
+
+            const totalCostoFIFO = (salidaFIFO.tramos || []).reduce(
+                (acc, tramo) => acc + (Number(tramo.cantidad || 0) * Number(tramo.costoUnitario || 0)),
+                0
+            );
+
+            const costoUnitario = salidaFIFO.modo === 'FIFO_TIENDA' && cantidad > 0
+                ? (totalCostoFIFO / cantidad)
+                : Number(producto.precioCosto || 0);
+
+            const gananciaItem = (precioUnitario - costoUnitario) * cantidad;
+            totalGanancia += gananciaItem;
 
             detalleRows.push({
                 productoId: producto.id,
@@ -251,6 +361,7 @@ router.post('/ventas', async (req, res) => {
         res.status(201).json({
             venta: ventaCompleta,
             gananciaTotal: totalGanancia,
+            numeroVenta: numeroVentaFinal,
         });
     } catch (error) {
         await t.rollback();
@@ -290,6 +401,7 @@ router.get('/ventas', async (req, res) => {
 });
 
 router.post('/gastos', async (req, res) => {
+    const t = await sequelize.transaction();
     try {
         const {
             fecha,
@@ -302,26 +414,38 @@ router.post('/gastos', async (req, res) => {
         } = req.body;
 
         if (!categoria || !descripcion) {
+            await t.rollback();
             return res.status(400).json({ error: 'Categoría y descripción son obligatorias.' });
         }
 
         const montoNum = Number(monto);
         if (Number.isNaN(montoNum) || montoNum <= 0) {
+            await t.rollback();
             return res.status(400).json({ error: 'El monto debe ser mayor a 0.' });
         }
 
+        const fechaOperacion = normalizarFechaOperativa(fecha);
+        const metodoPagoFinal = metodoPago || 'Efectivo';
+
+        if (metodoPagoFinal === 'Efectivo') {
+            await ensureCajaTurnoAutomatico({ fechaVenta: fechaOperacion, transaction: t });
+        }
+
         const gasto = await GastoDiario.create({
-            fecha: fecha || new Date(),
+            fecha: fechaOperacion,
             categoria,
             descripcion,
             monto: montoNum,
-            metodoPago: metodoPago || 'Efectivo',
+            metodoPago: metodoPagoFinal,
             comprobante,
             observaciones,
-        });
+        }, { transaction: t });
+
+        await t.commit();
 
         res.status(201).json(gasto);
     } catch (error) {
+        await t.rollback();
         res.status(500).json({ error: 'Error al registrar gasto diario', details: error.message });
     }
 });
@@ -358,7 +482,7 @@ router.get('/gastos', async (req, res) => {
 router.get('/resumen', async (req, res) => {
     try {
         const { fechaInicio, fechaFin } = req.query;
-        const hoy = new Date().toISOString().split('T')[0];
+        const hoy = getBoliviaDateString();
         const inicio = fechaInicio || hoy;
         const fin = fechaFin || hoy;
 
@@ -370,6 +494,7 @@ router.get('/resumen', async (req, res) => {
 });
 
 router.post('/planillas', async (req, res) => {
+    const t = await sequelize.transaction();
     try {
         const {
             fecha,
@@ -382,26 +507,38 @@ router.post('/planillas', async (req, res) => {
         } = req.body;
 
         if (!tipoPlanilla || !categoria || !concepto) {
+            await t.rollback();
             return res.status(400).json({ error: 'Tipo, categoría y concepto son obligatorios.' });
         }
 
         const montoNum = Number(monto);
         if (Number.isNaN(montoNum) || montoNum <= 0) {
+            await t.rollback();
             return res.status(400).json({ error: 'El monto debe ser mayor a 0.' });
         }
 
+        const fechaOperacion = normalizarFechaOperativa(fecha);
+        const metodoPagoFinal = metodoPago || 'Efectivo';
+
+        if (metodoPagoFinal === 'Efectivo') {
+            await ensureCajaTurnoAutomatico({ fechaVenta: fechaOperacion, transaction: t });
+        }
+
         const registro = await PlanillaRegistro.create({
-            fecha: fecha || new Date(),
+            fecha: fechaOperacion,
             tipoPlanilla,
             categoria,
             concepto,
             monto: montoNum,
-            metodoPago: metodoPago || 'Efectivo',
+            metodoPago: metodoPagoFinal,
             observaciones,
-        });
+        }, { transaction: t });
+
+        await t.commit();
 
         res.status(201).json(registro);
     } catch (error) {
+        await t.rollback();
         res.status(500).json({ error: 'Error al registrar planilla', details: error.message });
     }
 });
@@ -447,12 +584,13 @@ router.post('/caja-turnos/apertura', async (req, res) => {
             return res.status(400).json({ error: 'Saldo inicial no válido.' });
         }
 
-        const fechaTurno = fecha || new Date().toISOString().split('T')[0];
+        const fechaTurno = normalizarFechaOperativa(fecha);
+        const turnoAplicado = turno || getBoliviaCurrentTurno();
 
         const existente = await CajaTurno.findOne({
             where: {
                 fecha: fechaTurno,
-                turno,
+                turno: turnoAplicado,
                 estado: 'ABIERTO',
             },
         });
@@ -463,7 +601,7 @@ router.post('/caja-turnos/apertura', async (req, res) => {
 
         const caja = await CajaTurno.create({
             fecha: fechaTurno,
-            turno,
+            turno: turnoAplicado,
             responsable,
             saldoInicial: saldoInicialNum,
             observaciones,
@@ -692,6 +830,119 @@ router.post('/google-sheets/sync', async (req, res) => {
         res.json({ message: 'Sincronización con Google Sheets completada.', periodo: reporte.periodo });
     } catch (error) {
         res.status(500).json({ error: 'Error al sincronizar Google Sheets', details: error.message });
+    }
+});
+
+router.post('/google-sheets/import', async (req, res) => {
+    try {
+        const report = await runImportGoogleSheets({
+            spreadsheetId: req.body.spreadsheetId || process.env.GOOGLE_SHEETS_SPREADSHEET_ID,
+            sheetsToImport: req.body.sheets || DEFAULT_IMPORT_SHEETS,
+            columnMappings: req.body.columnMappings || {},
+            dryRun: req.body.dryRun === true,
+            upsert: req.body.upsert !== false,
+            source: 'MANUAL_API',
+        });
+
+        res.json({
+            message: report.dryRun
+                ? 'Simulacion de importacion completada (sin cambios en BD).'
+                : 'Importacion desde Google Sheets completada.',
+            report,
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Error en importacion desde Google Sheets', details: error.message });
+    }
+});
+
+router.post('/google-sheets/import/preview', async (req, res) => {
+    try {
+        const preview = await previewImportGoogleSheets({
+            spreadsheetId: req.body.spreadsheetId || process.env.GOOGLE_SHEETS_SPREADSHEET_ID,
+            sheetsToImport: req.body.sheets || DEFAULT_IMPORT_SHEETS,
+            columnMappings: req.body.columnMappings || {},
+        });
+
+        res.json({
+            message: 'Preview de estructura completado.',
+            preview,
+            expectedFields: getExpectedFieldsSpec(),
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Error al previsualizar importacion desde Google Sheets', details: error.message });
+    }
+});
+
+router.post('/google-sheets/import/auto/trigger', async (req, res) => {
+    try {
+        const result = await ejecutarImportSiCorresponde('MANUAL_TRIGGER');
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: 'Error al ejecutar importacion automatica', details: error.message });
+    }
+});
+
+router.get('/google-sheets/import/extras', async (req, res) => {
+    try {
+        const {
+            entidadTipo,
+            entidadId,
+            hoja,
+            page = 1,
+            limit = 50,
+        } = req.query;
+
+        const where = {};
+
+        if (entidadTipo) where.entidadTipo = entidadTipo;
+        if (entidadId) where.entidadId = Number(entidadId);
+        if (hoja) where.hoja = hoja;
+
+        const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+        const limitNum = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 200);
+        const offset = (pageNum - 1) * limitNum;
+
+        const { count, rows } = await GoogleSheetsImportExtra.findAndCountAll({
+            where,
+            order: [['updatedAt', 'DESC']],
+            limit: limitNum,
+            offset,
+        });
+
+        return res.json({
+            data: rows,
+            pagination: {
+                total: count,
+                page: pageNum,
+                limit: limitNum,
+                totalPages: Math.ceil(count / limitNum),
+            },
+        });
+    } catch (error) {
+        return res.status(500).json({
+            error: 'Error al consultar columnas extra importadas.',
+            details: error.message,
+        });
+    }
+});
+
+router.get('/google-sheets/import/estado', async (req, res) => {
+    try {
+        const scheduler = getGoogleSheetsImportSchedulerStatus();
+
+        res.json({
+            scheduler,
+            config: {
+                spreadsheetIdConfigured: Boolean(process.env.GOOGLE_SHEETS_SPREADSHEET_ID),
+                serviceAccountEmailConfigured: Boolean(process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL),
+                privateKeyConfigured: Boolean(process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY),
+                autoEnabled: ['1', 'true', 'yes', 'on'].includes(String(process.env.ENABLE_GOOGLE_SHEETS_IMPORT_AUTO || '').toLowerCase()),
+                sheets: normalizeSheetsToImport(process.env.GOOGLE_SHEETS_IMPORT_SHEETS || DEFAULT_IMPORT_SHEETS.join(',')),
+                intervalMin: parseInt(process.env.GOOGLE_SHEETS_IMPORT_INTERVAL_MIN || '30', 10),
+            },
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Error al obtener estado de importacion Google Sheets', details: error.message });
     }
 });
 

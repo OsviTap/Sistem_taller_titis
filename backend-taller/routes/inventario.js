@@ -7,8 +7,10 @@ const {
     InventarioLote,
     InventarioMovimiento,
     InventarioStockDiario,
+    InventarioLoteHistorialCambio,
 } = require('../models');
 const { generarSnapshotDiario } = require('../services/inventarioService');
+const { getBoliviaDateString } = require('../utils/datetimeBolivia');
 
 const router = express.Router();
 
@@ -29,6 +31,46 @@ const calcularPrecioSugerido = (costoUnitario, porcentajeGanancia) => {
     const costo = toNumber(costoUnitario, 0);
     const margen = toNumber(porcentajeGanancia, 0);
     return Number((costo * (1 + margen / 100)).toFixed(2));
+};
+
+const calcularPorcentajeDesdeMonto = (costoUnitario, montoGanancia) => {
+    const costo = toNumber(costoUnitario, 0);
+    const monto = toNumber(montoGanancia, 0);
+    if (costo <= 0 || monto <= 0) return 0;
+    return Number(((monto / costo) * 100).toFixed(2));
+};
+
+const resolverMargenYPrecio = ({ costoUnitario, porcentajeGanancia, montoGanancia, precioVentaSugerido }) => {
+    const costo = Math.max(toNumber(costoUnitario, 0), 0);
+    const monto = Math.max(toNumber(montoGanancia, 0), 0);
+    const precioManual = toNumber(precioVentaSugerido, 0);
+
+    let margen = toNumber(porcentajeGanancia, 0);
+    if (margen < 0) {
+        throw new Error('El porcentaje de ganancia no puede ser negativo');
+    }
+
+    if (margen === 0 && monto > 0) {
+        margen = calcularPorcentajeDesdeMonto(costo, monto);
+    }
+
+    let precioFinal = precioManual;
+    if (precioFinal <= 0) {
+        if (monto > 0) {
+            precioFinal = Number((costo + monto).toFixed(2));
+        } else {
+            precioFinal = calcularPrecioSugerido(costo, margen);
+        }
+    }
+
+    if (precioFinal < 0) {
+        throw new Error('El precio de venta sugerido no puede ser negativo');
+    }
+
+    return {
+        margen,
+        precioFinal,
+    };
 };
 
 const normalizarCodigoUbicacion = (codigo) => String(codigo || '').trim().toUpperCase();
@@ -94,20 +136,23 @@ router.get('/resumen', async (req, res) => {
         await ensureUbicacionesBase();
 
         const { page = 1, limit = 20, search = '' } = req.query;
-        const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+        const currentPage = Math.max(parseInt(page, 10) || 1, 1);
+        const pageSize = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 200);
+        const offset = (currentPage - 1) * pageSize;
 
         const whereProducto = {};
         if (search) {
             whereProducto[Op.or] = [
                 { nombre: { [Op.like]: `%${search}%` } },
                 { id: { [Op.like]: `%${search}%` } },
+                { sku: { [Op.like]: `%${search}%` } },
             ];
         }
 
         const { count, rows } = await Producto.findAndCountAll({
             where: whereProducto,
-            attributes: ['id', 'nombre', 'stock', 'precioCosto', 'precioVenta', 'fechaAdquisicion'],
-            limit: parseInt(limit, 10),
+            attributes: ['id', 'sku', 'nombre', 'stock', 'stockMinimo', 'precioCosto', 'precioVenta', 'fechaAdquisicion'],
+            limit: pageSize,
             offset,
             order: [['nombre', 'ASC']],
         });
@@ -116,8 +161,8 @@ router.get('/resumen', async (req, res) => {
             return res.json({
                 data: [],
                 totalItems: count,
-                totalPages: Math.ceil(count / limit),
-                currentPage: parseInt(page, 10),
+                totalPages: Math.ceil(count / pageSize),
+                currentPage,
             });
         }
 
@@ -162,8 +207,8 @@ router.get('/resumen', async (req, res) => {
         res.json({
             data,
             totalItems: count,
-            totalPages: Math.ceil(count / limit),
-            currentPage: parseInt(page, 10),
+            totalPages: Math.ceil(count / pageSize),
+            currentPage,
         });
     } catch (error) {
         res.status(500).json({ error: 'Error al obtener resumen de inventario', details: error.message });
@@ -175,12 +220,16 @@ router.get('/alertas-reposicion', async (req, res) => {
         await ensureUbicacionesBase();
 
         const {
+            page = 1,
+            limit = 20,
             search = '',
             usarDefault = 'true',
             stockMinimoDefault = 5,
             incluirSinAlerta = 'false',
-            limit = 500,
         } = req.query;
+
+        const currentPage = Math.max(parseInt(page, 10) || 1, 1);
+        const pageSize = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100);
 
         const whereProducto = {};
         if (search) {
@@ -195,7 +244,6 @@ router.get('/alertas-reposicion', async (req, res) => {
             where: whereProducto,
             attributes: ['id', 'sku', 'nombre', 'stock', 'stockMinimo', 'precioCosto', 'precioVenta'],
             order: [['nombre', 'ASC']],
-            limit: Math.min(parseInt(limit, 10) || 500, 5000),
         });
 
         if (!productos.length) {
@@ -207,6 +255,10 @@ router.get('/alertas-reposicion', async (req, res) => {
                     sinCoberturaAlmacen: 0,
                 },
                 alertas: [],
+                totalItems: 0,
+                totalPages: 0,
+                currentPage,
+                limit: pageSize,
             });
         }
 
@@ -301,7 +353,20 @@ router.get('/alertas-reposicion', async (req, res) => {
             sinCoberturaAlmacen: alertas.filter((a) => a.deficitTienda > 0 && a.sugerenciaTraslado === 0).length,
         };
 
-        res.json({ resumen, alertas: alertasFiltradas });
+        const totalItems = alertasFiltradas.length;
+        const totalPages = totalItems > 0 ? Math.ceil(totalItems / pageSize) : 0;
+        const safeCurrentPage = totalPages > 0 ? Math.min(currentPage, totalPages) : 1;
+        const offset = (safeCurrentPage - 1) * pageSize;
+        const alertasPaginadas = alertasFiltradas.slice(offset, offset + pageSize);
+
+        res.json({
+            resumen,
+            alertas: alertasPaginadas,
+            totalItems,
+            totalPages,
+            currentPage: safeCurrentPage,
+            limit: pageSize,
+        });
     } catch (error) {
         res.status(500).json({ error: 'Error al obtener alertas de reposicion', details: error.message });
     }
@@ -319,6 +384,7 @@ router.post('/ingresos', async (req, res) => {
             cantidad,
             costoUnitario,
             porcentajeGanancia = 0,
+            montoGanancia = 0,
             precioVentaSugerido,
             documentoIngreso,
             proveedor,
@@ -341,25 +407,24 @@ router.post('/ingresos', async (req, res) => {
             throw new Error('Costo unitario no valido');
         }
 
-        const margenNum = toNumber(porcentajeGanancia, 0);
-        if (margenNum < 0) {
-            throw new Error('El porcentaje de ganancia no puede ser negativo');
-        }
-
         const producto = await Producto.findByPk(productoId, { transaction: t });
         if (!producto) {
             throw new Error(`Producto no encontrado: ${productoId}`);
         }
 
         const ubicacion = await getUbicacionByCodigo(ubicacionCodigo, t);
-        const precioSugeridoFinal = toNumber(precioVentaSugerido, 0) > 0
-            ? toNumber(precioVentaSugerido, 0)
-            : calcularPrecioSugerido(costoNum, margenNum);
+        const fechaIngresoAplicada = fechaIngreso ? String(fechaIngreso).slice(0, 10) : getBoliviaDateString();
+        const { margen: margenNum, precioFinal: precioSugeridoFinal } = resolverMargenYPrecio({
+            costoUnitario: costoNum,
+            porcentajeGanancia,
+            montoGanancia,
+            precioVentaSugerido,
+        });
 
         const lote = await InventarioLote.create({
             productoId: producto.id,
             ubicacionId: ubicacion.id,
-            fechaIngreso: fechaIngreso || new Date(),
+            fechaIngreso: fechaIngresoAplicada,
             documentoIngreso,
             proveedor,
             cantidadInicial: cantidadNum,
@@ -392,7 +457,7 @@ router.post('/ingresos', async (req, res) => {
         if (actualizarPreciosProducto) {
             payloadProducto.precioCosto = costoNum;
             payloadProducto.precioVenta = precioSugeridoFinal;
-            payloadProducto.fechaAdquisicion = fechaIngreso || new Date();
+            payloadProducto.fechaAdquisicion = fechaIngresoAplicada;
         }
 
         await producto.update(payloadProducto, { transaction: t });
@@ -409,9 +474,11 @@ router.post('/ingresos', async (req, res) => {
             productoId: producto.id,
             loteId: lote.id,
             ubicacion: ubicacion.codigo,
+            fechaIngreso: fechaIngresoAplicada,
             cantidad: cantidadNum,
             costoUnitario: costoNum,
             porcentajeGanancia: margenNum,
+            montoGanancia: Number((costoNum * (margenNum / 100)).toFixed(2)),
             precioVentaSugerido: precioSugeridoFinal,
         });
     } catch (error) {
@@ -594,6 +661,214 @@ router.get('/productos/:productoId/lotes', async (req, res) => {
         res.json(lotes);
     } catch (error) {
         res.status(500).json({ error: 'Error al obtener lotes', details: error.message });
+    }
+});
+
+router.put('/lotes/:loteId/parametros-comerciales', async (req, res) => {
+    const t = await sequelize.transaction();
+    try {
+        const { loteId } = req.params;
+        const {
+            fechaVigencia,
+            fechaIngreso,
+            costoUnitario,
+            porcentajeGanancia,
+            montoGanancia,
+            precioVentaSugerido,
+            motivo,
+            usuarioResponsable,
+        } = req.body;
+
+        const lote = await InventarioLote.findByPk(loteId, { transaction: t, lock: t.LOCK.UPDATE });
+        if (!lote) {
+            throw new Error('Lote no encontrado');
+        }
+
+        if (toNumber(lote.cantidadDisponible, 0) <= 0) {
+            throw new Error('Solo se pueden ajustar lotes con stock disponible');
+        }
+
+        const costoAnterior = toNumber(lote.costoUnitario, 0);
+        const margenAnterior = toNumber(lote.porcentajeGanancia, 0);
+        const precioAnterior = toNumber(lote.precioVentaSugerido, 0);
+        const fechaIngresoAnterior = lote.fechaIngreso;
+
+        const costoNuevo = (costoUnitario !== undefined && costoUnitario !== null)
+            ? Math.max(toNumber(costoUnitario, -1), -1)
+            : costoAnterior;
+
+        if (costoNuevo < 0) {
+            throw new Error('Costo unitario no valido');
+        }
+
+        const { margen: margenNuevo, precioFinal: precioNuevo } = resolverMargenYPrecio({
+            costoUnitario: costoNuevo,
+            porcentajeGanancia: porcentajeGanancia ?? margenAnterior,
+            montoGanancia,
+            precioVentaSugerido: precioVentaSugerido ?? precioAnterior,
+        });
+
+        const fechaIngresoNueva = fechaIngreso ? String(fechaIngreso).slice(0, 10) : fechaIngresoAnterior;
+
+        await lote.update({
+            fechaIngreso: fechaIngresoNueva,
+            costoUnitario: costoNuevo,
+            porcentajeGanancia: margenNuevo,
+            precioVentaSugerido: precioNuevo,
+        }, { transaction: t });
+
+        await InventarioLoteHistorialCambio.create({
+            loteId: lote.id,
+            productoId: lote.productoId,
+            fechaVigencia: fechaVigencia ? String(fechaVigencia).slice(0, 10) : getBoliviaDateString(),
+            tipoCambio: fechaIngreso && String(fechaIngreso).slice(0, 10) !== String(fechaIngresoAnterior)
+                ? 'CORRECCION_FECHA_INGRESO'
+                : 'AJUSTE_COMERCIAL',
+            costoAnterior,
+            costoNuevo,
+            porcentajeGananciaAnterior: margenAnterior,
+            porcentajeGananciaNuevo: margenNuevo,
+            precioVentaAnterior: precioAnterior,
+            precioVentaNuevo: precioNuevo,
+            fechaIngresoAnterior,
+            fechaIngresoNueva,
+            motivo,
+            usuarioResponsable,
+        }, { transaction: t });
+
+        await t.commit();
+        res.json({
+            message: 'Parámetros comerciales del lote actualizados correctamente',
+            loteId: lote.id,
+            productoId: lote.productoId,
+            cantidadDisponible: lote.cantidadDisponible,
+            costoAnterior,
+            costoNuevo,
+            porcentajeGananciaAnterior: margenAnterior,
+            porcentajeGananciaNuevo: margenNuevo,
+            precioVentaAnterior: precioAnterior,
+            precioVentaNuevo: precioNuevo,
+            fechaIngresoAnterior,
+            fechaIngresoNueva,
+        });
+    } catch (error) {
+        await t.rollback();
+        res.status(500).json({ error: 'Error al actualizar parámetros comerciales del lote', details: error.message });
+    }
+});
+
+router.get('/lotes/:loteId/historial-cambios', async (req, res) => {
+    try {
+        const { loteId } = req.params;
+        const {
+            page = 1,
+            limit = 20,
+            tipoCambio,
+            usuarioResponsable,
+            fechaInicio,
+            fechaFin,
+            search,
+        } = req.query;
+        const currentPage = Math.max(parseInt(page, 10) || 1, 1);
+        const pageSize = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100);
+        const offset = (currentPage - 1) * pageSize;
+
+        const where = { loteId };
+        if (tipoCambio) {
+            where.tipoCambio = tipoCambio;
+        }
+        if (usuarioResponsable) {
+            where.usuarioResponsable = { [Op.like]: `%${usuarioResponsable}%` };
+        }
+        if (fechaInicio || fechaFin) {
+            where.fechaVigencia = {};
+            if (fechaInicio) where.fechaVigencia[Op.gte] = String(fechaInicio).slice(0, 10);
+            if (fechaFin) where.fechaVigencia[Op.lte] = String(fechaFin).slice(0, 10);
+        }
+        if (search) {
+            where[Op.or] = [
+                { motivo: { [Op.like]: `%${search}%` } },
+                { usuarioResponsable: { [Op.like]: `%${search}%` } },
+            ];
+        }
+
+        const { count, rows } = await InventarioLoteHistorialCambio.findAndCountAll({
+            where,
+            limit: pageSize,
+            offset,
+            order: [['createdAt', 'DESC'], ['id', 'DESC']],
+        });
+
+        res.json({
+            data: rows,
+            totalItems: count,
+            totalPages: Math.ceil(count / pageSize),
+            currentPage,
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Error al obtener historial de cambios del lote', details: error.message });
+    }
+});
+
+router.get('/historial-cambios', async (req, res) => {
+    try {
+        const {
+            productoId,
+            loteId,
+            fechaInicio,
+            fechaFin,
+            tipoCambio,
+            usuarioResponsable,
+            search,
+            page = 1,
+            limit = 50,
+        } = req.query;
+        const currentPage = Math.max(parseInt(page, 10) || 1, 1);
+        const pageSize = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 200);
+        const offset = (currentPage - 1) * pageSize;
+
+        const where = {};
+        if (productoId) {
+            where.productoId = productoId;
+        }
+        if (loteId) {
+            where.loteId = loteId;
+        }
+        if (tipoCambio) {
+            where.tipoCambio = tipoCambio;
+        }
+        if (usuarioResponsable) {
+            where.usuarioResponsable = { [Op.like]: `%${usuarioResponsable}%` };
+        }
+
+        if (fechaInicio || fechaFin) {
+            where.fechaVigencia = {};
+            if (fechaInicio) where.fechaVigencia[Op.gte] = String(fechaInicio).slice(0, 10);
+            if (fechaFin) where.fechaVigencia[Op.lte] = String(fechaFin).slice(0, 10);
+        }
+        if (search) {
+            where[Op.or] = [
+                { motivo: { [Op.like]: `%${search}%` } },
+                { usuarioResponsable: { [Op.like]: `%${search}%` } },
+            ];
+        }
+
+        const { count, rows } = await InventarioLoteHistorialCambio.findAndCountAll({
+            where,
+            include: [{ model: Producto, as: 'producto', attributes: ['id', 'nombre', 'sku'] }],
+            limit: pageSize,
+            offset,
+            order: [['createdAt', 'DESC'], ['id', 'DESC']],
+        });
+
+        res.json({
+            data: rows,
+            totalItems: count,
+            totalPages: Math.ceil(count / pageSize),
+            currentPage,
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Error al obtener historial de cambios de inventario', details: error.message });
     }
 });
 
@@ -926,7 +1201,7 @@ router.get('/snapshot-diario/estado', async (req, res) => {
 router.post('/snapshot-diario', async (req, res) => {
     const t = await sequelize.transaction();
     try {
-        const fecha = req.body.fecha || new Date().toISOString().slice(0, 10);
+        const fecha = req.body.fecha || getBoliviaDateString();
         const resultado = await generarSnapshotDiario({ fecha, transaction: t });
 
         await t.commit();

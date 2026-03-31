@@ -24,6 +24,8 @@ const InventarioUbicacion = require('./InventarioUbicacion');
 const InventarioLote = require('./InventarioLote');
 const InventarioMovimiento = require('./InventarioMovimiento');
 const InventarioStockDiario = require('./InventarioStockDiario');
+const InventarioLoteHistorialCambio = require('./InventarioLoteHistorialCambio');
+const GoogleSheetsImportExtra = require('./GoogleSheetsImportExtra');
 
 
 // Configurar las relaciones
@@ -147,6 +149,24 @@ InventarioMovimiento.belongsTo(InventarioLote, {
     as: 'lote'
 });
 
+InventarioLote.hasMany(InventarioLoteHistorialCambio, {
+    foreignKey: 'loteId',
+    as: 'historialCambios'
+});
+InventarioLoteHistorialCambio.belongsTo(InventarioLote, {
+    foreignKey: 'loteId',
+    as: 'lote'
+});
+
+Producto.hasMany(InventarioLoteHistorialCambio, {
+    foreignKey: 'productoId',
+    as: 'historialCambiosInventario'
+});
+InventarioLoteHistorialCambio.belongsTo(Producto, {
+    foreignKey: 'productoId',
+    as: 'producto'
+});
+
 InventarioMovimiento.belongsTo(InventarioUbicacion, {
     foreignKey: 'ubicacionOrigenId',
     as: 'ubicacionOrigen'
@@ -244,6 +264,8 @@ module.exports = {
     InventarioLote,
     InventarioMovimiento,
     InventarioStockDiario,
+    InventarioLoteHistorialCambio,
+    GoogleSheetsImportExtra,
     Servicio,
     Usuario,
     Vehiculo,

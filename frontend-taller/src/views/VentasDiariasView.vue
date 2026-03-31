@@ -28,8 +28,14 @@
             <input v-model="ventaForm.fecha" type="date" class="input-field" />
           </div>
           <div>
-            <label class="field-label">Nro. Venta</label>
-            <input v-model="ventaForm.numeroVenta" type="text" class="input-field" placeholder="VD-20260331-001" />
+            <label class="field-label">Nro. Venta (Automático por fecha)</label>
+            <input
+              v-model="ventaForm.numeroVenta"
+              type="text"
+              class="input-field"
+              placeholder="Se asigna automáticamente"
+              readonly
+            />
           </div>
           <div>
             <label class="field-label">Cliente (Opcional)</label>
@@ -354,6 +360,7 @@
                   <th>Teórico</th>
                   <th>Arqueo</th>
                   <th>Diferencia</th>
+                  <th>Extras</th>
                 </tr>
               </thead>
               <tbody>
@@ -368,8 +375,16 @@
                   <td :class="Number(turno.diferencia || 0) >= 0 ? 'text-blue-700' : 'text-red-700'">
                     Bs {{ Number(turno.diferencia || 0).toFixed(2) }}
                   </td>
+                  <td>
+                    <button
+                      @click="abrirExtrasImportacion('CajaTurno', turno.id, `${turno.fecha} - ${turno.turno}`)"
+                      class="text-indigo-700 hover:text-indigo-900"
+                    >
+                      Ver extras
+                    </button>
+                  </td>
                 </tr>
-                <tr v-if="cajaTurnos.length === 0"><td colspan="8" class="empty-row">Sin movimientos de caja</td></tr>
+                <tr v-if="cajaTurnos.length === 0"><td colspan="9" class="empty-row">Sin movimientos de caja</td></tr>
               </tbody>
             </table>
           </div>
@@ -432,6 +447,7 @@
                     <th>Fecha</th>
                     <th>Cliente</th>
                     <th>Total</th>
+                    <th>Extras</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -439,8 +455,16 @@
                     <td>{{ venta.fecha }}</td>
                     <td>{{ venta.clienteNombre || 'Mostrador' }}</td>
                     <td>Bs {{ Number(venta.total).toFixed(2) }}</td>
+                    <td>
+                      <button
+                        @click="abrirExtrasImportacion('VentaDiaria', venta.id, venta.numeroVenta || venta.fecha)"
+                        class="text-indigo-700 hover:text-indigo-900"
+                      >
+                        Ver extras
+                      </button>
+                    </td>
                   </tr>
-                  <tr v-if="ventas.length === 0"><td colspan="3" class="empty-row">Sin ventas</td></tr>
+                  <tr v-if="ventas.length === 0"><td colspan="4" class="empty-row">Sin ventas</td></tr>
                 </tbody>
               </table>
             </div>
@@ -455,6 +479,7 @@
                     <th>Fecha</th>
                     <th>Categoría</th>
                     <th>Monto</th>
+                    <th>Extras</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -462,8 +487,16 @@
                     <td>{{ gasto.fecha }}</td>
                     <td>{{ gasto.categoria }}</td>
                     <td>Bs {{ Number(gasto.monto).toFixed(2) }}</td>
+                    <td>
+                      <button
+                        @click="abrirExtrasImportacion('GastoDiario', gasto.id, `${gasto.fecha} - ${gasto.categoria}`)"
+                        class="text-indigo-700 hover:text-indigo-900"
+                      >
+                        Ver extras
+                      </button>
+                    </td>
                   </tr>
-                  <tr v-if="gastos.length === 0"><td colspan="3" class="empty-row">Sin gastos</td></tr>
+                  <tr v-if="gastos.length === 0"><td colspan="4" class="empty-row">Sin gastos</td></tr>
                 </tbody>
               </table>
             </div>
@@ -478,6 +511,7 @@
                     <th>Fecha</th>
                     <th>Tipo</th>
                     <th>Monto</th>
+                    <th>Extras</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -485,8 +519,16 @@
                     <td>{{ planilla.fecha }}</td>
                     <td>{{ planilla.tipoPlanilla }}</td>
                     <td>Bs {{ Number(planilla.monto).toFixed(2) }}</td>
+                    <td>
+                      <button
+                        @click="abrirExtrasImportacion('PlanillaRegistro', planilla.id, `${planilla.fecha} - ${planilla.tipoPlanilla}`)"
+                        class="text-indigo-700 hover:text-indigo-900"
+                      >
+                        Ver extras
+                      </button>
+                    </td>
                   </tr>
-                  <tr v-if="planillas.length === 0"><td colspan="3" class="empty-row">Sin planillas</td></tr>
+                  <tr v-if="planillas.length === 0"><td colspan="4" class="empty-row">Sin planillas</td></tr>
                 </tbody>
               </table>
             </div>
@@ -554,6 +596,59 @@
         </div>
       </div>
     </div>
+
+    <div v-if="extrasPanel.visible" class="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-3">
+      <div class="w-full max-w-4xl bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 max-h-[85vh] overflow-hidden">
+        <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Campos extra importados</h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              {{ extrasPanel.entidadTipo }} #{{ extrasPanel.entidadId }} - {{ extrasPanel.etiqueta || 'Sin etiqueta' }}
+            </p>
+          </div>
+          <button @click="cerrarExtrasImportacion" class="px-3 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200">Cerrar</button>
+        </div>
+
+        <div class="p-4 space-y-3 overflow-auto max-h-[70vh]">
+          <p v-if="extrasPanel.loading" class="text-sm text-gray-500">Cargando extras...</p>
+          <p v-else-if="extrasPanel.error" class="text-sm text-red-600">{{ extrasPanel.error }}</p>
+          <p v-else-if="extrasPanel.items.length === 0" class="text-sm text-gray-500">Esta entidad no tiene columnas extra importadas.</p>
+
+          <div
+            v-for="item in extrasPanel.items"
+            :key="item.id"
+            class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
+          >
+            <div class="px-3 py-2 bg-gray-50 dark:bg-gray-700/40 text-xs text-gray-600 dark:text-gray-300 flex flex-wrap gap-3">
+              <span>Hoja: {{ item.hoja }}</span>
+              <span>Fila: {{ item.rowNumber || '-' }}</span>
+              <span>Fuente: {{ item.source || '-' }}</span>
+              <span>Actualizado: {{ formatearFechaHora(item.updatedAt) }}</span>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="table-sm">
+                <thead>
+                  <tr>
+                    <th>Columna</th>
+                    <th>Valor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(valor, campo) in (item.columnasExtra || {})" :key="`${item.id}-${campo}`">
+                    <td>{{ campo }}</td>
+                    <td class="max-w-[520px] whitespace-pre-wrap break-words">{{ serializarValorExtra(valor) }}</td>
+                  </tr>
+                  <tr v-if="Object.keys(item.columnasExtra || {}).length === 0">
+                    <td colspan="2" class="empty-row">Sin pares clave/valor</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -571,7 +666,21 @@ const categoriasPlanillaTienda = ['Silicona', 'Agua acidulada', 'Limpieza', 'Ins
 const categoriasPlanillaSueldos = ['Pago sueldos', 'Agua', 'Luz', 'Internet', 'Telefonía', 'Impuestos', 'Otros servicios'];
 
 const now = new Date();
-const today = now.toISOString().split('T')[0];
+const getBoliviaDate = () => {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/La_Paz',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+
+  const year = parts.find((p) => p.type === 'year')?.value;
+  const month = parts.find((p) => p.type === 'month')?.value;
+  const day = parts.find((p) => p.type === 'day')?.value;
+  return `${year}-${month}-${day}`;
+};
+
+const today = getBoliviaDate();
 
 const ventaForm = ref({
   fecha: today,
@@ -650,6 +759,16 @@ const reporteMensual = ref({
   planillas: [],
   cajaTurnos: [],
   topProductos: [],
+});
+
+const extrasPanel = ref({
+  visible: false,
+  loading: false,
+  entidadTipo: '',
+  entidadId: null,
+  etiqueta: '',
+  items: [],
+  error: '',
 });
 
 const categoriasPlanillaActual = computed(() => (
@@ -754,7 +873,7 @@ const guardarVenta = async () => {
   }
 
   try {
-    await axios.post('/ventas-diarias/ventas', {
+    const response = await axios.post('/ventas-diarias/ventas', {
       ...ventaForm.value,
       items: detalleVenta.value.map((item) => ({
         productoId: item.productoId,
@@ -763,7 +882,8 @@ const guardarVenta = async () => {
       })),
     });
 
-    Swal.fire('Venta registrada', 'La venta diaria se registró correctamente.', 'success');
+    const numeroAsignado = response.data?.numeroVenta || response.data?.venta?.numeroVenta || 'asignado';
+    Swal.fire('Venta registrada', `Venta guardada con Nro: ${numeroAsignado}.`, 'success');
     resetVenta();
     await Promise.all([buscarProductos(), cargarHistorial(), cargarCajaTurnos()]);
   } catch (error) {
@@ -1136,6 +1256,57 @@ const sincronizarGoogleSheets = async () => {
   } catch (error) {
     Swal.fire('Error', error.response?.data?.details || error.response?.data?.error || 'No se pudo sincronizar Google Sheets.', 'error');
   }
+};
+
+const serializarValorExtra = (value) => {
+  if (value === null || value === undefined || value === '') return '-';
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+};
+
+const formatearFechaHora = (value) => {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+
+  return new Intl.DateTimeFormat('es-BO', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+    timeZone: 'America/La_Paz',
+  }).format(date);
+};
+
+const abrirExtrasImportacion = async (entidadTipo, entidadId, etiqueta = '') => {
+  extrasPanel.value = {
+    visible: true,
+    loading: true,
+    entidadTipo,
+    entidadId,
+    etiqueta,
+    items: [],
+    error: '',
+  };
+
+  try {
+    const response = await axios.get('/ventas-diarias/google-sheets/import/extras', {
+      params: {
+        entidadTipo,
+        entidadId,
+        page: 1,
+        limit: 50,
+      },
+    });
+
+    extrasPanel.value.items = response.data?.data || [];
+  } catch (error) {
+    extrasPanel.value.error = error.response?.data?.details || 'No se pudieron cargar los campos extra.';
+  } finally {
+    extrasPanel.value.loading = false;
+  }
+};
+
+const cerrarExtrasImportacion = () => {
+  extrasPanel.value.visible = false;
 };
 
 onMounted(async () => {

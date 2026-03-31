@@ -35,6 +35,8 @@ const io = require('socket.io')(server, {
 // Configura io en la app
 app.setIO(io);
 iniciarSchedulerSnapshotDiario();
+const { iniciarGoogleSheetsImportScheduler } = require('../services/googleSheetsImportSchedulerService');
+iniciarGoogleSheetsImportScheduler();
 
 /**
  * Listen on provided port, on all network interfaces.

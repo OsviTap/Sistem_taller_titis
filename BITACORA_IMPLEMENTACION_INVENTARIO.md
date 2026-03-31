@@ -170,3 +170,191 @@
   - Priorizar continuidad operativa con fallback en cliente mientras se completa despliegue backend.
 - Pendientes para siguiente bloque:
   - Verificar en produccion post-deploy que `/api/ventas-diarias/reporte-ejecutivo/mensual` responda 200 de forma consistente.
+
+## Registro 2026-03-31 - Trazabilidad comercial por lote y numeracion automatica diaria
+- Fecha: 2026-03-31
+- Fase: Fase 3 (Control financiero inteligente)
+- Objetivo del bloque: Asegurar FIFO real con costo por lote, trazabilidad de cambios comerciales y numeracion automatica diaria por fecha operativa Bolivia.
+- Cambios realizados:
+  - Se incorporo helper de fecha/hora Bolivia para unificar fecha operativa del sistema (`America/La_Paz`).
+  - Se implemento numeracion automatica de ventas por dia (`VD-YYYYMMDD-####`) respetando fecha de registro, incluso para ventas atrasadas.
+  - Se habilito apertura automatica de turno de caja para ventas/gastos/planillas en efectivo cuando no exista turno abierto del dia.
+  - Se corrigio el calculo de ganancia en ventas para usar costo FIFO real consumido por lote, no costo global del producto.
+  - Se creo historial de cambios comerciales por lote (`inventario_lote_historial_cambios`) para registrar toda modificacion de costo, margen, precio y fecha de ingreso.
+  - Se agregaron endpoints de inventario para editar parametros comerciales de lotes con stock disponible y consultar historial de cambios.
+  - En frontend de ventas diarias se ajusto fecha por defecto a Bolivia y se dejo el numero de venta en modo automatico.
+- Archivos tocados:
+  - backend-taller/utils/datetimeBolivia.js
+  - backend-taller/models/InventarioLoteHistorialCambio.js
+  - backend-taller/models/index.js
+  - backend-taller/routes/inventario.js
+  - backend-taller/routes/ventasDiarias.js
+  - frontend-taller/src/views/VentasDiariasView.vue
+- Migraciones ejecutadas:
+  - No SQL manual en este bloque; tabla nueva creada via `sequelize.sync()`.
+- Resultado de build/tests:
+  - Sintaxis backend OK (`node --check` en rutas/modelo/util tocados).
+  - Build frontend OK (`vite build`).
+- Riesgos detectados:
+  - Si en produccion no se ejecuta `sequelize.sync()` con permisos de DDL, la tabla de historial de cambios no se creara automaticamente.
+  - Numeracion automatica diaria depende del formato `VD-YYYYMMDD-####`; cambios manuales de formato pueden afectar correlativo.
+- Decisiones tomadas:
+  - Mantener posibilidad de numero manual solo si no se repite por fecha; en caso contrario se fuerza validacion.
+  - Priorizar trazabilidad financiera por lote para auditoria completa de margen real vendido.
+- Pendientes para siguiente bloque:
+  - Exponer UI dedicada en control de inventario para editar lotes y visualizar historial de cambios sin salir de la vista.
+  - Agregar indice unico opcional por (`fecha`, `numeroVenta`) en `ventas_diarias` para blindar concurrencia a nivel DB.
+
+## Registro 2026-03-31 - UI de lotes con edicion auditada
+- Fecha: 2026-03-31
+- Fase: Fase 3 (Control financiero inteligente)
+- Objetivo del bloque: Llevar a interfaz la gestion profesional de lotes, permitiendo ajuste comercial y consulta visual de historial.
+- Cambios realizados:
+  - Se agrego en control de inventario una seccion de busqueda de producto para cargar lotes activos.
+  - Se implemento formulario de edicion por lote (fecha de vigencia, fecha ingreso, costo, margen, monto de ganancia, precio, motivo y responsable).
+  - Se conecto guardado de ajustes contra endpoint auditado de backend por lote.
+  - Se agrego tabla de historial de cambios con paginacion por lote directamente en la misma vista.
+  - Se incorporo campo de monto de ganancia tambien en ingreso rapido de stock para operar por porcentaje o por monto.
+- Archivos tocados:
+  - frontend-taller/src/views/InventarioControlView.vue
+  - BITACORA_IMPLEMENTACION_INVENTARIO.md
+- Migraciones ejecutadas:
+  - No aplica.
+- Resultado de build/tests:
+  - Build frontend OK (`vite build`).
+  - Sintaxis backend OK (`node --check`).
+- Riesgos detectados:
+  - Si existen muchos lotes por producto, puede requerirse paginacion en endpoint de lotes para rendimiento extremo.
+- Decisiones tomadas:
+  - Mantener historial por lote visible en contexto para auditoria operativa sin cambiar de pantalla.
+- Pendientes para siguiente bloque:
+  - Agregar filtros visuales de historial (fecha/tipo/usuario).
+  - Evaluar bloqueo optimista visual para evitar ediciones simultaneas de un mismo lote desde varios usuarios.
+
+## Registro 2026-03-31 - Filtros avanzados y exportacion de historial por lote
+- Fecha: 2026-03-31
+- Fase: Fase 3 (Control financiero inteligente)
+- Objetivo del bloque: Potenciar auditoria de cambios por lote con filtros operativos y exportacion para analisis externo.
+- Cambios realizados:
+  - Se ampliaron endpoints de historial de lotes para filtrar por tipo de cambio, usuario responsable, texto libre y rango de fechas.
+  - Se agregaron filtros visuales en la vista de inventario para historial por lote.
+  - Se implemento exportacion CSV del historial filtrado por lote desde la misma interfaz.
+- Archivos tocados:
+  - backend-taller/routes/inventario.js
+  - frontend-taller/src/views/InventarioControlView.vue
+  - BITACORA_IMPLEMENTACION_INVENTARIO.md
+- Migraciones ejecutadas:
+  - No aplica.
+- Resultado de build/tests:
+  - Build frontend OK (vite build).
+  - Sintaxis backend OK (node --check).
+- Riesgos detectados:
+  - Exportaciones muy grandes pueden demorar por paginado sucesivo; si crece el volumen convendra endpoint de export backend directo.
+- Decisiones tomadas:
+  - Mantener exportacion CSV en frontend por simplicidad y despliegue rapido.
+- Pendientes para siguiente bloque:
+  - Agregar exportacion XLSX y firma digital de reporte de cambios para auditoria formal.
+
+## Registro 2026-03-31 - Sincronizacion inversa Google Sheets a base de datos
+- Fecha: 2026-03-31
+- Fase: Fase 4 (Integracion externa de datos)
+- Objetivo del bloque: Permitir carga de datos historicos desde hojas Google hacia BD y dejar opcion de sincronizacion automatica continua.
+- Cambios realizados:
+  - Se creo servicio de importacion inversa desde Google Sheets hacia `ventas_diarias`, `gastos_diarios`, `planillas_registros` y `caja_turnos`.
+  - Se implemento modo `dryRun` para simular importacion sin persistir cambios.
+  - Se agrego estrategia de deduplicacion por etiquetas de importacion en observaciones para evitar duplicados al reimportar.
+  - Se crearon endpoints para ejecutar importacion manual, revisar estado y disparar importacion automatica bajo demanda.
+  - Se implemento scheduler de importacion automatica configurable por variables de entorno.
+  - Se integro el scheduler en el arranque del servidor.
+- Archivos tocados:
+  - backend-taller/services/googleSheetsImportService.js
+  - backend-taller/services/googleSheetsImportSchedulerService.js
+  - backend-taller/routes/ventasDiarias.js
+  - backend-taller/bin/www
+  - BITACORA_IMPLEMENTACION_INVENTARIO.md
+- Migraciones ejecutadas:
+  - No aplica.
+- Resultado de build/tests:
+  - Sintaxis backend OK (`node --check` en rutas y servicios nuevos).
+- Riesgos detectados:
+  - Si las hojas origen no respetan encabezados base esperados, algunas filas se omiten o requieren mapeo adicional.
+  - Importar ventas sin detalle de productos no descuenta inventario ni genera detalle FIFO (se importa como cabecera historica financiera).
+- Decisiones tomadas:
+  - Priorizar importacion idempotente y segura para no duplicar informacion financiera.
+  - Mantener scheduler desactivado por defecto y activarlo por configuracion explicita.
+- Pendientes para siguiente bloque:
+  - Incorporar mapeo visual de columnas para hojas personalizadas del negocio.
+  - Agregar endpoint de previsualizacion de diferencias antes de aplicar importacion real.
+
+## Registro 2026-03-31 - Preview de columnas y mapeo flexible Google Sheets
+- Fecha: 2026-03-31
+- Fase: Fase 4 (Integracion externa de datos)
+- Objetivo del bloque: Permitir importar hojas con encabezados diferentes y detectar columnas no mapeadas antes de guardar.
+- Cambios realizados:
+  - Se agrego analisis de estructura de hojas para detectar encabezados mapeados y columnas desconocidas.
+  - Se habilito endpoint `POST /api/ventas-diarias/google-sheets/import/preview` para validacion previa.
+  - Se habilito `columnMappings` opcional en importacion para mapear nombres de columnas personalizados.
+- Archivos tocados:
+  - backend-taller/services/googleSheetsImportService.js
+  - backend-taller/routes/ventasDiarias.js
+  - BITACORA_IMPLEMENTACION_INVENTARIO.md
+- Migraciones ejecutadas:
+  - No aplica.
+- Resultado de build/tests:
+  - Sintaxis backend OK (`node --check`).
+- Riesgos detectados:
+  - Mapeos incorrectos pueden mover datos a campos equivocados; se recomienda usar siempre preview antes de importar.
+- Decisiones tomadas:
+  - Mantener import tolerante a columnas extra (se ignoran) y configurable para columnas renombradas.
+- Pendientes para siguiente bloque:
+  - Crear UI de mapeo de columnas para evitar enviar `columnMappings` manualmente por API.
+
+## Registro 2026-03-31 - Persistencia de columnas extra en importacion Sheets
+- Fecha: 2026-03-31
+- Fase: Fase 4 (Integracion externa de datos)
+- Objetivo del bloque: Evitar perdida de informacion cuando la hoja trae columnas nuevas no contempladas en campos base.
+- Cambios realizados:
+  - Se creo modelo `GoogleSheetsImportExtra` para almacenar columnas desconocidas en JSON por entidad importada.
+  - Se integro persistencia automatica de columnas extra en importacion de Ventas, Gastos, Planillas y Caja.
+  - Se agrego conteo `extrasCapturados` en el reporte de importacion por cada hoja.
+  - Se agrego endpoint para consultar columnas extra capturadas por filtros (`entidadTipo`, `entidadId`, `hoja`).
+  - Se actualizo guia de setup para documentar el nuevo comportamiento.
+- Archivos tocados:
+  - backend-taller/models/GoogleSheetsImportExtra.js
+  - backend-taller/models/index.js
+  - backend-taller/services/googleSheetsImportService.js
+  - backend-taller/routes/ventasDiarias.js
+  - backend-taller/GOOGLE_SHEETS_IMPORT_SETUP.md
+  - BITACORA_IMPLEMENTACION_INVENTARIO.md
+- Migraciones ejecutadas:
+  - No aplica SQL manual; tabla nueva creada via `sequelize.sync()`.
+- Resultado de build/tests:
+  - Pendiente validacion sintactica en backend del bloque completo.
+- Riesgos detectados:
+  - La captura de columnas extra usa encabezados normalizados; para conservar nombres exactos se debe usar preview como referencia.
+- Decisiones tomadas:
+  - Persistir extras fuera de tablas financieras base para no impactar estructura contable existente.
+- Pendientes para siguiente bloque:
+  - Exponer endpoint/UI para consultar `google_sheets_import_extras` por venta/gasto/planilla/caja desde frontend.
+
+## Registro 2026-03-31 - Vista frontend de extras importados por entidad
+- Fecha: 2026-03-31
+- Fase: Fase 4 (Integracion externa de datos)
+- Objetivo del bloque: Consultar desde interfaz los campos nuevos importados desde Sheets sin usar API manual.
+- Cambios realizados:
+  - Se agregaron acciones `Ver extras` en tablas de ventas, gastos, planillas y caja por turnos.
+  - Se implemento modal de detalle para mostrar columnas extra capturadas (`columna -> valor`) por entidad.
+  - Se conecto la vista al endpoint `GET /api/ventas-diarias/google-sheets/import/extras` con filtros por tipo e id de entidad.
+- Archivos tocados:
+  - frontend-taller/src/views/VentasDiariasView.vue
+  - BITACORA_IMPLEMENTACION_INVENTARIO.md
+- Migraciones ejecutadas:
+  - No aplica.
+- Resultado de build/tests:
+  - Build frontend OK (`npm run build`).
+- Riesgos detectados:
+  - Si una entidad no tiene datos extras, el modal muestra estado vacio; comportamiento esperado.
+- Decisiones tomadas:
+  - Reutilizar la vista de gestion diaria existente para evitar una pantalla adicional y mantener contexto operativo.
+- Pendientes para siguiente bloque:
+  - Mostrar un indicador visual (badge) de cantidad de extras por fila para no abrir modal en vacio.

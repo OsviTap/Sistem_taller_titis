@@ -146,3 +146,27 @@
   - Habilitar edicion masiva de `stockMinimo`/`sku` desde interfaz de productos.
   - Agregar exportacion de kardex diario (CSV/PDF) para contabilidad.
   - Revisar warning `useUTC` en configuracion MySQL2 para compatibilidad futura.
+
+## Registro 2026-03-31 - Correccion vista ventas diarias
+- Fecha: 2026-03-31
+- Fase: Fase 2 (Estabilizacion)
+- Objetivo del bloque: Corregir fallos observados en vista de ventas diarias en entorno desplegado.
+- Cambios realizados:
+  - Se corrigio error 500 del endpoint de reporte mensual por columna ambigua en agregacion SQL (`subtotal`).
+  - Se endurecio la carga de historial diario en frontend para tolerar fallos parciales de endpoints sin bloquear toda la vista.
+  - Se agrego fallback de reporte mensual en frontend para construir el reporte desde endpoints base cuando falla el endpoint ejecutivo.
+- Archivos tocados:
+  - backend-taller/routes/ventasDiarias.js
+  - frontend-taller/src/views/VentasDiariasView.vue
+- Migraciones ejecutadas:
+  - No aplica.
+- Resultado de build/tests:
+  - Sintaxis backend OK.
+  - Build frontend OK (`vite build`).
+- Riesgos detectados:
+  - Si el backend desplegado no contiene la version actualizada, el endpoint ejecutivo seguira respondiendo 500 hasta nuevo deploy.
+  - Si Render entra en cold start o fallback temporal de rutas, la vista mostrara carga parcial con aviso.
+- Decisiones tomadas:
+  - Priorizar continuidad operativa con fallback en cliente mientras se completa despliegue backend.
+- Pendientes para siguiente bloque:
+  - Verificar en produccion post-deploy que `/api/ventas-diarias/reporte-ejecutivo/mensual` responda 200 de forma consistente.

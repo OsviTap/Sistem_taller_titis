@@ -866,17 +866,47 @@ const cargarHistorial = async () => {
       limit: 100,
     };
 
-    const [ventasResp, gastosResp, planillasResp, resumenResp] = await Promise.all([
+    const [ventasResp, gastosResp, planillasResp, resumenResp] = await Promise.allSettled([
       axios.get('/ventas-diarias/ventas', { params }),
       axios.get('/ventas-diarias/gastos', { params }),
       axios.get('/ventas-diarias/planillas', { params }),
       axios.get('/ventas-diarias/resumen', { params }),
     ]);
 
-    ventas.value = ventasResp.data.data || [];
-    gastos.value = gastosResp.data.data || [];
-    planillas.value = planillasResp.data.data || [];
-    resumen.value = resumenResp.data || {};
+    const errores = [];
+
+    if (ventasResp.status === 'fulfilled') {
+      ventas.value = ventasResp.value.data.data || [];
+    } else {
+      ventas.value = [];
+      errores.push(`ventas: ${ventasResp.reason?.response?.status || 'sin respuesta'}`);
+    }
+
+    if (gastosResp.status === 'fulfilled') {
+      gastos.value = gastosResp.value.data.data || [];
+    } else {
+      gastos.value = [];
+      errores.push(`gastos: ${gastosResp.reason?.response?.status || 'sin respuesta'}`);
+    }
+
+    if (planillasResp.status === 'fulfilled') {
+      planillas.value = planillasResp.value.data.data || [];
+    } else {
+      planillas.value = [];
+      errores.push(`planillas: ${planillasResp.reason?.response?.status || 'sin respuesta'}`);
+    }
+
+    if (resumenResp.status === 'fulfilled') {
+      resumen.value = resumenResp.value.data || {};
+    } else {
+      resumen.value = {};
+      errores.push(`resumen: ${resumenResp.reason?.response?.status || 'sin respuesta'}`);
+    }
+
+    if (errores.length) {
+      console.warn('Carga parcial en historial diario:', errores.join(' | '));
+      Swal.fire('Carga parcial', `Algunos datos no se pudieron cargar (${errores.join(', ')}).`, 'warning');
+    }
   } catch (error) {
     console.error('Error al cargar historial diario', error);
     Swal.fire('Error', 'No se pudo cargar el historial diario.', 'error');
@@ -909,7 +939,75 @@ const cargarReporteMensual = async () => {
     });
     reporteMensual.value = response.data;
   } catch (error) {
-    Swal.fire('Error', error.response?.data?.details || 'No se pudo generar el reporte mensual.', 'error');
+    const details = error.response?.data?.details || '';
+    const shouldFallback = error.response?.status === 500 || error.response?.status === 404;
+
+    if (!shouldFallback) {
+      Swal.fire('Error', details || 'No se pudo generar el reporte mensual.', 'error');
+      return;
+    }
+
+    try {
+      const y = Number(reporteFiltro.value.year);
+      const m = Number(reporteFiltro.value.month);
+      const startDate = `${y}-${String(m).padStart(2, '0')}-01`;
+      const endDate = `${y}-${String(m).padStart(2, '0')}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
+
+      const params = { fechaInicio: startDate, fechaFin: endDate, page: 1, limit: 2000 };
+      const [ventasResp, gastosResp, planillasResp, cajaResp, resumenResp] = await Promise.all([
+        axios.get('/ventas-diarias/ventas', { params }),
+        axios.get('/ventas-diarias/gastos', { params }),
+        axios.get('/ventas-diarias/planillas', { params }),
+        axios.get('/ventas-diarias/caja-turnos', { params }),
+        axios.get('/ventas-diarias/resumen', { params }),
+      ]);
+
+      const ventasData = ventasResp.data.data || [];
+      const topMap = new Map();
+
+      ventasData.forEach((venta) => {
+        (venta.detalles || []).forEach((d) => {
+          const key = d.nombreProducto || `Producto ${d.productoId}`;
+          const current = topMap.get(key) || {
+            nombreProducto: key,
+            cantidadTotal: 0,
+            montoTotal: 0,
+            gananciaTotal: 0,
+          };
+
+          current.cantidadTotal += Number(d.cantidad || 0);
+          current.montoTotal += Number(d.subtotal || 0);
+          current.gananciaTotal += Number(d.ganancia || 0);
+          topMap.set(key, current);
+        });
+      });
+
+      const topProductos = Array.from(topMap.values())
+        .sort((a, b) => b.cantidadTotal - a.cantidadTotal)
+        .slice(0, 20);
+
+      reporteMensual.value = {
+        periodo: { year: y, month: m, startDate, endDate },
+        resumen: resumenResp.data || {},
+        ventas: ventasData,
+        gastos: gastosResp.data.data || [],
+        planillas: planillasResp.data.data || [],
+        cajaTurnos: cajaResp.data.data || [],
+        topProductos,
+      };
+
+      Swal.fire(
+        'Reporte en modo compatibilidad',
+        'El endpoint ejecutivo falló y se generó el reporte con agregación desde endpoints base.',
+        'warning'
+      );
+    } catch (fallbackError) {
+      Swal.fire(
+        'Error',
+        details || fallbackError.response?.data?.details || 'No se pudo generar el reporte mensual.',
+        'error'
+      );
+    }
   }
 };
 

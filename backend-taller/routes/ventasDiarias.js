@@ -47,9 +47,9 @@ const getTopProductos = async (fechaInicio, fechaFin) => {
     const rows = await DetalleVentaDiaria.findAll({
         attributes: [
             'nombreProducto',
-            [fn('SUM', col('cantidad')), 'cantidadTotal'],
-            [fn('SUM', col('subtotal')), 'montoTotal'],
-            [fn('SUM', col('ganancia')), 'gananciaTotal'],
+            [fn('SUM', col('DetalleVentaDiaria.cantidad')), 'cantidadTotal'],
+            [fn('SUM', col('DetalleVentaDiaria.subtotal')), 'montoTotal'],
+            [fn('SUM', col('DetalleVentaDiaria.ganancia')), 'gananciaTotal'],
         ],
         include: [{ model: VentaDiaria, as: 'venta', attributes: [], where: whereVenta }],
         group: ['DetalleVentaDiaria.nombreProducto'],

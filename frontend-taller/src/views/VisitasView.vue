@@ -241,69 +241,89 @@
                 </button>
 
                 <div class="border-t border-gray-200 dark:border-gray-600 pt-3 mt-3">
-                  <p class="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Producto no registrado</p>
-
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <input
-                      type="text"
-                      v-model="productoManualNombre"
-                      class="input-text"
-                      placeholder="Nombre del producto"
-                    />
-                    <input
-                      type="number"
-                      v-model.number="productoManualPrecio"
-                      class="input-text"
-                      min="0"
-                      step="0.01"
-                      placeholder="Precio unitario"
-                    />
-                    <input
-                      type="number"
-                      v-model.number="productoManualCantidad"
-                      class="input-text"
-                      min="1"
-                      step="1"
-                      placeholder="Cantidad"
-                    />
-                    <input
-                      type="text"
-                      v-model="productoManualObservacion"
-                      class="input-text"
-                      placeholder="Observación (opcional)"
-                    />
-                  </div>
-
-                  <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 mt-2">
-                    <input type="checkbox" v-model="productoManualGuardarCatalogo" />
-                    Guardar también en catálogo
-                  </label>
-
-                  <div v-if="productoManualGuardarCatalogo" class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
-                    <input
-                      type="number"
-                      v-model.number="productoManualPrecioCosto"
-                      class="input-text"
-                      min="0"
-                      step="0.01"
-                      placeholder="Precio costo (catálogo)"
-                    />
-                    <input
-                      type="text"
-                      v-model="productoManualSku"
-                      class="input-text"
-                      placeholder="SKU (opcional)"
-                    />
-                  </div>
-
                   <button
                     type="button"
-                    @click="agregarProductoNoRegistrado"
-                    :disabled="!productoManualValido"
-                    class="btn-secondary w-full mt-2"
+                    @click="mostrarProductoExterno = !mostrarProductoExterno"
+                    class="w-full flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-200"
                   >
-                    Agregar producto no registrado
+                    <span>Producto externo / no registrado</span>
+                    <svg
+                      class="w-4 h-4 transition-transform duration-200"
+                      :class="{ 'rotate-180': mostrarProductoExterno }"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fill-rule="evenodd"
+                        d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.51a.75.75 0 01-1.08 0l-4.25-4.51a.75.75 0 01.02-1.06z"
+                        clip-rule="evenodd"
+                      />
+                    </svg>
                   </button>
+
+                  <div v-if="mostrarProductoExterno" class="mt-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        v-model="productoManualNombre"
+                        class="input-text"
+                        placeholder="Nombre del producto"
+                      />
+                      <input
+                        type="number"
+                        v-model.number="productoManualPrecio"
+                        class="input-text"
+                        min="0"
+                        step="0.01"
+                        placeholder="Precio unitario"
+                      />
+                      <input
+                        type="number"
+                        v-model.number="productoManualCantidad"
+                        class="input-text"
+                        min="1"
+                        step="1"
+                        placeholder="Cantidad"
+                      />
+                      <input
+                        type="text"
+                        v-model="productoManualObservacion"
+                        class="input-text"
+                        placeholder="Observación (opcional)"
+                      />
+                    </div>
+
+                    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 mt-2">
+                      <input type="checkbox" v-model="productoManualGuardarCatalogo" />
+                      Guardar también en catálogo
+                    </label>
+
+                    <div v-if="productoManualGuardarCatalogo" class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                      <input
+                        type="number"
+                        v-model.number="productoManualPrecioCosto"
+                        class="input-text"
+                        min="0"
+                        step="0.01"
+                        placeholder="Precio costo (catálogo)"
+                      />
+                      <input
+                        type="text"
+                        v-model="productoManualSku"
+                        class="input-text"
+                        placeholder="SKU (opcional)"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      @click="agregarProductoNoRegistrado"
+                      :disabled="!productoManualValido"
+                      class="btn-secondary w-full mt-2"
+                    >
+                      Agregar producto no registrado
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -415,6 +435,7 @@ const productoManualObservacion = ref('');
 const productoManualGuardarCatalogo = ref(false);
 const productoManualPrecioCosto = ref(0);
 const productoManualSku = ref('');
+const mostrarProductoExterno = ref(false);
 
 // Referencias para la búsqueda de productos
 const productoSearchTerm = ref('');
@@ -722,6 +743,7 @@ const agregarProductoNoRegistrado = () => {
   productoManualGuardarCatalogo.value = false;
   productoManualPrecioCosto.value = 0;
   productoManualSku.value = '';
+  mostrarProductoExterno.value = false;
 };
 
 const eliminarDetalle = (index, tipo) => {
@@ -1105,6 +1127,7 @@ const resetearFormulario = () => {
     productoManualGuardarCatalogo.value = false;
     productoManualPrecioCosto.value = 0;
     productoManualSku.value = '';
+    mostrarProductoExterno.value = false;
     showClientesList.value = false;
     showProductosList.value = false;
 };

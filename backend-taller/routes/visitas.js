@@ -19,6 +19,8 @@ const normalizeOrigenInventario = (value, modoRegistro) => {
     return 'INVENTARIO';
 };
 
+const normalizeText = (value) => String(value || '').trim();
+
 const toNumber = (value, fallback = 0) => {
     const n = Number(value);
     return Number.isFinite(n) ? n : fallback;
@@ -184,10 +186,10 @@ router.get('/', async (req, res) => {
                             let nombre = 'N/A';
                             if (detalle.tipo === 'Producto') {
                                 const producto = await Producto.findByPk(detalle.itemId, { attributes: ['nombre'] });
-                                nombre = producto ? producto.nombre : 'Producto eliminado';
+                                nombre = producto ? producto.nombre : (detalle.nombreProducto || 'Producto eliminado');
                             } else if (detalle.tipo === 'Servicio') {
                                 const servicio = await Servicio.findByPk(detalle.itemId, { attributes: ['nombre'] });
-                                nombre = servicio ? servicio.nombre : 'Servicio eliminado';
+                                nombre = servicio ? servicio.nombre : (detalle.nombreProducto || 'Servicio eliminado');
                             }
                             return { ...detalle, nombre };
                         })
@@ -216,6 +218,7 @@ router.post('/', async (req, res) => {
     try {
         const fechaVisita = normalizeDateInput(req.body.fecha) || getBoliviaDateString();
         const modoRegistroInventario = normalizeRegistroMode(req.body.modoRegistroInventario);
+        const detalleMap = [];
 
         // 1. Crear la visita
         const visita = await Visita.create({
@@ -231,11 +234,13 @@ router.post('/', async (req, res) => {
 
         // 2. Crear los detalles y actualizar stock
         if (req.body.detalles && req.body.detalles.length > 0) {
-            for (const detalle of req.body.detalles) {
+            for (let detalleIndex = 0; detalleIndex < req.body.detalles.length; detalleIndex += 1) {
+                const detalle = req.body.detalles[detalleIndex];
                 let nombreItem = null;
                 let producto = null;
+                let itemIdFinal = toNumber(detalle.itemId, 0);
                 const origenInventario = normalizeOrigenInventario(detalle.origenInventario, modoRegistroInventario);
-                const afectaStock = modoRegistroInventario === 'OPERATIVO'
+                const afectaStockSolicitado = modoRegistroInventario === 'OPERATIVO'
                     && origenInventario === 'INVENTARIO'
                     && detalle.afectaStock !== false;
                 const costoCompraExterna = toNumber(detalle.costoCompraExterna, 0);
@@ -243,10 +248,39 @@ router.post('/', async (req, res) => {
 
                 // Si es un producto, obtener datos y validar stock antes de crear el detalle
                 if (detalle.tipo === 'Producto') {
-                    producto = await Producto.findByPk(detalle.itemId, { transaction: t });
+                    if (itemIdFinal > 0) {
+                        producto = await Producto.findByPk(itemIdFinal, { transaction: t });
+                    }
+
+                    const nombreProductoManual = normalizeText(detalle.nombreProductoManual);
+                    const registrarProductoCatalogo = Boolean(detalle.registrarProductoCatalogo);
+
+                    if (!producto && registrarProductoCatalogo) {
+                        const nombreCatalogo = nombreProductoManual || `Producto externo visita ${visita.id}-${detalleIndex + 1}`;
+                        const precioVentaCatalogo = Math.max(toNumber(detalle.precio, 0), 0);
+                        const precioCostoCatalogo = Math.max(
+                            toNumber(detalle.precioCostoRegistro, precioVentaCatalogo),
+                            0
+                        );
+
+                        producto = await Producto.create({
+                            nombre: nombreCatalogo,
+                            sku: normalizeText(detalle.skuRegistro) || null,
+                            stock: 0,
+                            stockMinimo: 0,
+                            precioCosto: precioCostoCatalogo,
+                            precioVenta: precioVentaCatalogo,
+                            fechaAdquisicion: fechaVisita,
+                        }, { transaction: t });
+
+                        itemIdFinal = producto.id;
+                    }
+
                     if (producto) {
                         nombreItem = producto.nombre;
-                        if (afectaStock) {
+                        itemIdFinal = producto.id;
+
+                        if (afectaStockSolicitado) {
                             const nuevoStock = producto.stock - detalle.cantidad;
                             if (nuevoStock < 0) {
                                 throw new Error(`Stock insuficiente para el producto ${producto.nombre}. Marca el item como compra directa o usa registro historico.`);
@@ -263,6 +297,13 @@ router.post('/', async (req, res) => {
 
                             await producto.update({ stock: nuevoStock }, { transaction: t });
                         }
+                    } else {
+                        if (!nombreProductoManual) {
+                            throw new Error('Producto no registrado: ingrese nombre manual o seleccione un producto del catálogo.');
+                        }
+
+                        nombreItem = nombreProductoManual;
+                        itemIdFinal = 0;
                     }
                 } else if (detalle.tipo === 'Servicio') {
                     // Si es un servicio, obtener su nombre para el snapshot
@@ -273,10 +314,14 @@ router.post('/', async (req, res) => {
                     }
                 }
 
+                const afectaStock = detalle.tipo === 'Producto'
+                    ? (afectaStockSolicitado && Boolean(producto && itemIdFinal > 0))
+                    : false;
+
                 await createDetalleVisitaCompat({
                     visitaId: visita.id,
                     tipo: detalle.tipo,
-                    itemId: detalle.itemId,
+                    itemId: itemIdFinal,
                     nombreProducto: nombreItem, // Guardar snapshot del nombre (producto o servicio)
                     precio: detalle.precio,
                     cantidad: detalle.cantidad || 1,
@@ -287,6 +332,16 @@ router.post('/', async (req, res) => {
                     observacionInventario,
                     estado: 1
                 }, t);
+
+                detalleMap.push({
+                    requestIndex: detalleIndex,
+                    tipo: detalle.tipo,
+                    itemIdOriginal: toNumber(detalle.itemId, 0),
+                    itemIdFinal,
+                    nombre: nombreItem,
+                    registradoEnCatalogo: Boolean(producto && toNumber(detalle.itemId, 0) <= 0 && Boolean(detalle.registrarProductoCatalogo)),
+                    afectaStock,
+                });
             }
         }
 
@@ -347,7 +402,13 @@ router.post('/', async (req, res) => {
             console.warn('[visitas] No se pudo recuperar visita completa post-commit:', fetchError.message);
         }
 
-        res.status(201).json(visitaCompleta || visita);
+        const responsePayload = visitaCompleta && typeof visitaCompleta.toJSON === 'function'
+            ? visitaCompleta.toJSON()
+            : (visitaCompleta || (typeof visita.toJSON === 'function' ? visita.toJSON() : visita));
+
+        responsePayload.detalleMap = detalleMap;
+
+        res.status(201).json(responsePayload);
 
     } catch (error) {
         if (!t.finished) {
@@ -400,7 +461,7 @@ router.get('/:id', async (req, res) => {
                 {
                     model: DetalleVisita,
                     as: 'detalles',
-                    attributes: ['id', 'tipo', 'itemId', 'precio', 'cantidad', 'subtotal']
+                    attributes: ['id', 'tipo', 'itemId', 'nombreProducto', 'precio', 'cantidad', 'subtotal']
                 }
             ]
         });
@@ -416,10 +477,10 @@ router.get('/:id', async (req, res) => {
                 let nombre = 'N/A';
                 if (detalle.tipo === 'Producto') {
                     const producto = await Producto.findByPk(detalle.itemId, { attributes: ['nombre'] });
-                    nombre = producto ? producto.nombre : 'Producto eliminado';
+                    nombre = producto ? producto.nombre : (detalle.nombreProducto || 'Producto eliminado');
                 } else if (detalle.tipo === 'Servicio') {
                     const servicio = await Servicio.findByPk(detalle.itemId, { attributes: ['nombre'] });
-                    nombre = servicio ? servicio.nombre : 'Servicio eliminado';
+                    nombre = servicio ? servicio.nombre : (detalle.nombreProducto || 'Servicio eliminado');
                 }
                 return {
                     ...detalle.toJSON(),

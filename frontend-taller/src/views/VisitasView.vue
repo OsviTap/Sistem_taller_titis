@@ -239,6 +239,72 @@
                         class="btn-primary w-full">
                   Agregar Producto
                 </button>
+
+                <div class="border-t border-gray-200 dark:border-gray-600 pt-3 mt-3">
+                  <p class="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Producto no registrado</p>
+
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      v-model="productoManualNombre"
+                      class="input-text"
+                      placeholder="Nombre del producto"
+                    />
+                    <input
+                      type="number"
+                      v-model.number="productoManualPrecio"
+                      class="input-text"
+                      min="0"
+                      step="0.01"
+                      placeholder="Precio unitario"
+                    />
+                    <input
+                      type="number"
+                      v-model.number="productoManualCantidad"
+                      class="input-text"
+                      min="1"
+                      step="1"
+                      placeholder="Cantidad"
+                    />
+                    <input
+                      type="text"
+                      v-model="productoManualObservacion"
+                      class="input-text"
+                      placeholder="Observación (opcional)"
+                    />
+                  </div>
+
+                  <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 mt-2">
+                    <input type="checkbox" v-model="productoManualGuardarCatalogo" />
+                    Guardar también en catálogo
+                  </label>
+
+                  <div v-if="productoManualGuardarCatalogo" class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                    <input
+                      type="number"
+                      v-model.number="productoManualPrecioCosto"
+                      class="input-text"
+                      min="0"
+                      step="0.01"
+                      placeholder="Precio costo (catálogo)"
+                    />
+                    <input
+                      type="text"
+                      v-model="productoManualSku"
+                      class="input-text"
+                      placeholder="SKU (opcional)"
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    @click="agregarProductoNoRegistrado"
+                    :disabled="!productoManualValido"
+                    class="btn-secondary w-full mt-2"
+                  >
+                    Agregar producto no registrado
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -342,6 +408,13 @@ const modoRegistroInventario = ref('OPERATIVO');
 const compraExternaProducto = ref(false);
 const costoCompraExternaProducto = ref(0);
 const observacionInventarioProducto = ref('');
+const productoManualNombre = ref('');
+const productoManualPrecio = ref(0);
+const productoManualCantidad = ref(1);
+const productoManualObservacion = ref('');
+const productoManualGuardarCatalogo = ref(false);
+const productoManualPrecioCosto = ref(0);
+const productoManualSku = ref('');
 
 // Referencias para la búsqueda de productos
 const productoSearchTerm = ref('');
@@ -396,6 +469,12 @@ const cantidadProductoValida = computed(() => {
   }
   return cantidadProducto.value > 0 && cantidadProducto.value <= productoSeleccionado.value.stock;
 });
+
+const productoManualValido = computed(() => (
+  String(productoManualNombre.value || '').trim().length > 0
+  && Number(productoManualPrecio.value || 0) > 0
+  && Number(productoManualCantidad.value || 0) > 0
+));
 
 
 const filteredProductos = computed(() => {
@@ -610,6 +689,41 @@ const agregarProducto = () => {
     }
 };
 
+const agregarProductoNoRegistrado = () => {
+  if (!productoManualValido.value) {
+    return;
+  }
+
+  const nombre = String(productoManualNombre.value || '').trim();
+  const precio = Number(productoManualPrecio.value || 0);
+  const cantidad = parseInt(productoManualCantidad.value || 1, 10);
+  const origenInventario = modoRegistroInventario.value === 'HISTORICO' ? 'HISTORICO' : 'COMPRA_DIRECTA';
+
+  detalleProductos.value.push({
+    id: null,
+    nombre,
+    precio,
+    cantidad,
+    origenInventario,
+    afectaStock: false,
+    costoCompraExterna: Number(productoManualPrecioCosto.value || precio),
+    observacionInventario: String(productoManualObservacion.value || '').trim() || 'Producto no registrado cargado desde visita',
+    nombreProductoManual: nombre,
+    registrarProductoCatalogo: Boolean(productoManualGuardarCatalogo.value),
+    precioCostoRegistro: Number(productoManualPrecioCosto.value || precio),
+    skuRegistro: String(productoManualSku.value || '').trim() || null,
+    esManual: true,
+  });
+
+  productoManualNombre.value = '';
+  productoManualPrecio.value = 0;
+  productoManualCantidad.value = 1;
+  productoManualObservacion.value = '';
+  productoManualGuardarCatalogo.value = false;
+  productoManualPrecioCosto.value = 0;
+  productoManualSku.value = '';
+};
+
 const eliminarDetalle = (index, tipo) => {
     if (tipo === 'Servicio') {
         detalleServicios.value.splice(index, 1);
@@ -667,6 +781,10 @@ const guardarVisita = async () => {
               afectaStock: Boolean(p.afectaStock),
               costoCompraExterna: Number(p.costoCompraExterna || 0),
               observacionInventario: p.observacionInventario || null,
+                  nombreProductoManual: p.nombreProductoManual || p.nombre,
+                  registrarProductoCatalogo: Boolean(p.registrarProductoCatalogo),
+                  precioCostoRegistro: Number(p.precioCostoRegistro || 0),
+                  skuRegistro: p.skuRegistro || null,
                 }))
             ]
         };
@@ -697,22 +815,37 @@ const guardarVisita = async () => {
         console.groupEnd();
 
         // Registrar productos en el historial
-        const productosPromises = detalleProductos.value.map(async producto => {
-            const productoResponse = await axios.get(`/productos/${producto.id}`);
-            const productoCompleto = productoResponse.data;
+        const detalleMap = response.data?.detalleMap || [];
+        const productStartIndex = detalleServicios.value.length;
 
-            // Registrar en el historial
-            await axios.post('/historial-productos', {
-              fechaSalida: visitaData.fecha,
-                cantidad: producto.cantidad,
-                precioCosto: productoCompleto.precioCosto,
-                precioVenta: producto.precio,
-                descuento: (descuento.value / detalleProductos.value.length) || 0,
-                productoId: producto.id,
-                clienteId: clienteSeleccionado.value,
-                vehiculoId: vehiculoSeleccionado.value,
-                visitaId: visitaId
+        const productosPromises = detalleProductos.value.map(async (producto, productIndex) => {
+          const requestIndex = productStartIndex + productIndex;
+          const mapItem = detalleMap.find((item) => item.tipo === 'Producto' && item.requestIndex === requestIndex);
+          const productoIdFinal = Number(mapItem?.itemIdFinal || producto.id || 0);
+
+          if (!productoIdFinal || productoIdFinal <= 0) {
+            console.info('[Visitas] Producto no registrado omitido en historial-productos (sin productoId):', {
+              requestIndex,
+              nombre: producto.nombre,
             });
+            return;
+          }
+
+          const productoResponse = await axios.get(`/productos/${productoIdFinal}`);
+          const productoCompleto = productoResponse.data;
+
+          // Registrar en el historial
+          await axios.post('/historial-productos', {
+            fechaSalida: visitaData.fecha,
+            cantidad: producto.cantidad,
+            precioCosto: productoCompleto.precioCosto,
+            precioVenta: producto.precio,
+            descuento: (descuento.value / detalleProductos.value.length) || 0,
+            productoId: productoIdFinal,
+            clienteId: clienteSeleccionado.value,
+            vehiculoId: vehiculoSeleccionado.value,
+            visitaId: visitaId
+          });
         });
 
         // Esperar a que se completen todos los registros
@@ -965,6 +1098,13 @@ const resetearFormulario = () => {
     compraExternaProducto.value = false;
     costoCompraExternaProducto.value = 0;
     observacionInventarioProducto.value = '';
+    productoManualNombre.value = '';
+    productoManualPrecio.value = 0;
+    productoManualCantidad.value = 1;
+    productoManualObservacion.value = '';
+    productoManualGuardarCatalogo.value = false;
+    productoManualPrecioCosto.value = 0;
+    productoManualSku.value = '';
     showClientesList.value = false;
     showProductosList.value = false;
 };

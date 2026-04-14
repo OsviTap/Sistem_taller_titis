@@ -19,7 +19,7 @@ const Visita = sequelize.define('Visita', {
         }
     },
     fecha: {
-        type: DataTypes.DATE,
+        type: DataTypes.DATEONLY,
         allowNull: false,
         defaultValue: DataTypes.NOW
     },

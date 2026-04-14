@@ -310,12 +310,31 @@ const showProductosList = ref(false);
 const productoDropdownRef = ref(null);
 
 // Referencias para los datos del formulario
-const fechaActual = ref(new Date());
+const getBoliviaDate = () => {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/La_Paz',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    }).formatToParts(new Date());
 
-const fechaFormateada = ref(new Date().toISOString().split('T')[0]);
+    const year = parts.find((p) => p.type === 'year')?.value;
+    const month = parts.find((p) => p.type === 'month')?.value;
+    const day = parts.find((p) => p.type === 'day')?.value;
+    return `${year}-${month}-${day}`;
+};
+
+const fechaFormateada = ref(getBoliviaDate());
 
 const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleDateString('es-ES', {
+  if (!dateString) return '';
+
+  const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(String(dateString));
+  const parsedDate = isDateOnly
+    ? new Date(`${dateString}T00:00:00`)
+    : new Date(dateString);
+
+  return parsedDate.toLocaleDateString('es-ES', {
     year: 'numeric',
     month: 'long',
     day: 'numeric'
@@ -568,7 +587,7 @@ const guardarVisita = async () => {
         const visitaData = {
             clienteId: clienteSeleccionado.value,
             vehiculoId: vehiculoSeleccionado.value,
-            fecha: new Date(fechaFormateada.value),
+          fecha: fechaFormateada.value,
             kilometraje: kilometraje.value,
             proximoCambio: proximoCambio.value,
             tipoPago: tipoPago.value,
@@ -594,6 +613,27 @@ const guardarVisita = async () => {
         const response = await axios.post('/visitas', visitaData);
         const visitaId = response.data.id;
 
+        console.groupCollapsed('[Visitas] Verificación de guardado');
+        console.info('Payload enviado:', visitaData);
+        console.info('Respuesta creación:', response.data);
+
+        try {
+          const verificacion = await axios.get(`/visitas/${visitaId}`);
+          console.info('Registro recuperado desde BD por ID:', {
+            id: verificacion.data?.id,
+            fecha: verificacion.data?.fecha,
+            clienteId: verificacion.data?.clienteId,
+            vehiculoId: verificacion.data?.vehiculoId,
+            total: verificacion.data?.total,
+            detalles: (verificacion.data?.detalles || []).length,
+          });
+          console.info('Resultado validación:', verificacion.data?.id ? 'OK - guardado confirmado' : 'Sin ID en verificación');
+        } catch (verifyError) {
+          console.error('Error verificando guardado por ID:', verifyError?.response?.data || verifyError.message);
+        }
+
+        console.groupEnd();
+
         // Registrar productos en el historial
         const productosPromises = detalleProductos.value.map(async producto => {
             const productoResponse = await axios.get(`/productos/${producto.id}`);
@@ -601,7 +641,7 @@ const guardarVisita = async () => {
 
             // Registrar en el historial
             await axios.post('/historial-productos', {
-                fechaSalida: new Date(),
+              fechaSalida: visitaData.fecha,
                 cantidad: producto.cantidad,
                 precioCosto: productoCompleto.precioCosto,
                 precioVenta: producto.precio,
@@ -641,7 +681,7 @@ const guardarVisita = async () => {
 
         // Guardar PDF
         const nombreCliente = clienteData.nombre.replace(/\s+/g, '_');
-        const fechaVisita = new Date(visitaData.fecha).toLocaleDateString('es-ES').replace(/\//g, '-');
+        const fechaVisita = String(visitaData.fecha).replace(/\//g, '-');
         const nombreArchivo = `${nombreCliente}_${fechaVisita}.pdf`;
         doc.save(nombreArchivo);
 
@@ -785,7 +825,7 @@ const generarDocumento = async () => {
         const visitaData = {
             clienteId: clienteSeleccionado.value,
             vehiculoId: vehiculoSeleccionado.value,
-            fecha: new Date(fechaFormateada.value),
+          fecha: fechaFormateada.value,
             kilometraje: kilometraje.value,
             proximoCambio: proximoCambio.value,
             tipoPago: tipoPago.value,
@@ -819,7 +859,7 @@ const generarDocumento = async () => {
 
         // Descargar PDF
         const nombreCliente = clienteData.nombre.replace(/\s+/g, '_');
-        const fechaVisita = new Date(visitaData.fecha).toLocaleDateString('es-ES').replace(/\//g, '-');
+        const fechaVisita = String(visitaData.fecha).replace(/\//g, '-');
         const nombreArchivo = `Proforma_${nombreCliente}_${fechaVisita}.pdf`;
         doc.save(nombreArchivo);
 

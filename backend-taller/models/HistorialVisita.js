@@ -3,7 +3,7 @@ const sequelize = require('../config/database');
 
 const HistorialVisita = sequelize.define('HistorialVisita', {
     fecha: { 
-        type: DataTypes.DATE, 
+        type: DataTypes.DATEONLY, 
         allowNull: false 
     },
     kilometraje: { 

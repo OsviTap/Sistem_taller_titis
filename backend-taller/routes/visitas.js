@@ -3,6 +3,59 @@ const { Visita, DetalleVisita, Cliente, Vehiculo, Producto, HistorialVisita, Mar
 const router = express.Router();
 const { sequelize } = require('../models');
 const { registrarSalidaInventarioFIFO } = require('../services/inventarioService');
+const { getBoliviaDateString } = require('../utils/datetimeBolivia');
+
+const normalizeDateInput = (value) => {
+    if (!value) return null;
+
+    const raw = String(value).trim();
+    if (!raw) return null;
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+        return raw;
+    }
+
+    const parsed = new Date(raw);
+    if (!Number.isNaN(parsed.getTime())) {
+        return getBoliviaDateString(parsed);
+    }
+
+    return null;
+};
+
+const addDateRangeClause = ({ whereClause, fechaInicio, fechaFin, Op }) => {
+    const inicio = normalizeDateInput(fechaInicio);
+    const fin = normalizeDateInput(fechaFin);
+
+    if (!inicio && !fin) return;
+
+    const filters = whereClause[Op.and] || [];
+
+    if (inicio && fin) {
+        filters.push(
+            sequelize.where(
+                sequelize.fn('DATE', sequelize.col('Visita.fecha')),
+                { [Op.between]: [inicio, fin] }
+            )
+        );
+    } else if (inicio) {
+        filters.push(
+            sequelize.where(
+                sequelize.fn('DATE', sequelize.col('Visita.fecha')),
+                { [Op.gte]: inicio }
+            )
+        );
+    } else {
+        filters.push(
+            sequelize.where(
+                sequelize.fn('DATE', sequelize.col('Visita.fecha')),
+                { [Op.lte]: fin }
+            )
+        );
+    }
+
+    whereClause[Op.and] = filters;
+};
 
 // Obtener todas las visitas
 // Obtener todas las visitas con paginación
@@ -16,20 +69,8 @@ router.get('/', async (req, res) => {
 
         if (clienteId) whereClause.clienteId = clienteId;
         if (vehiculoId) whereClause.vehiculoId = vehiculoId;
-        
-        if (fechaInicio && fechaFin) {
-            whereClause.fecha = {
-                [Op.between]: [new Date(fechaInicio), new Date(fechaFin)]
-            };
-        } else if (fechaInicio) {
-            whereClause.fecha = {
-                [Op.gte]: new Date(fechaInicio)
-            };
-        } else if (fechaFin) {
-            whereClause.fecha = {
-                [Op.lte]: new Date(fechaFin)
-            };
-        }
+
+        addDateRangeClause({ whereClause, fechaInicio, fechaFin, Op });
 
         if (search) {
             const term = String(search).trim();
@@ -127,11 +168,13 @@ router.post('/', async (req, res) => {
     const t = await sequelize.transaction();
 
     try {
+        const fechaVisita = normalizeDateInput(req.body.fecha) || getBoliviaDateString();
+
         // 1. Crear la visita
         const visita = await Visita.create({
             clienteId: req.body.clienteId,
             vehiculoId: req.body.vehiculoId,
-            fecha: req.body.fecha || new Date(),
+            fecha: fechaVisita,
             kilometraje: req.body.kilometraje,
             proximoCambio: req.body.proximoCambio,
             tipoPago: req.body.tipoPago,

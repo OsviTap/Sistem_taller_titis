@@ -36,6 +36,25 @@ const DetalleVisita = sequelize.define('DetalleVisita', {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false
     },
+    origenInventario: {
+        type: DataTypes.ENUM('INVENTARIO', 'COMPRA_DIRECTA', 'HISTORICO'),
+        allowNull: false,
+        defaultValue: 'INVENTARIO',
+        comment: 'Define si el item descuenta stock o fue compra directa/historica'
+    },
+    afectaStock: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true,
+    },
+    costoCompraExterna: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: true,
+    },
+    observacionInventario: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
     estado: {
         type: DataTypes.INTEGER,
         defaultValue: 1

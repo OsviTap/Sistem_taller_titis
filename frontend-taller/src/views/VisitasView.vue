@@ -84,6 +84,17 @@
             <label for="fecha" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Fecha</label>
             <input type="date" id="fecha" v-model="fechaFormateada" class="input-text" />
           </div>
+
+          <div>
+            <label for="modo-inventario" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Modo Inventario</label>
+            <select v-model="modoRegistroInventario" id="modo-inventario" class="input-select">
+              <option value="OPERATIVO">Operativo (descuenta stock)</option>
+              <option value="HISTORICO">Histórico (no descuenta stock)</option>
+            </select>
+            <p class="text-xs text-gray-500 mt-1">
+              Usa Histórico para cargas antiguas o regularizaciones donde no quieres mover inventario actual.
+            </p>
+          </div>
   
           <!-- Kilometraje Actual -->
           <div>
@@ -190,12 +201,36 @@
                     v-model.number="cantidadProducto"
                     class="input-text w-full sm:w-24"
                     min="1"
-                    :max="productoSeleccionado.stock"
+                    :max="modoRegistroInventario === 'OPERATIVO' && !compraExternaProducto ? productoSeleccionado.stock : undefined"
                     placeholder="Cant."
                   />
                   <span class="text-sm text-gray-500 dark:text-gray-400 self-center">
                     Disponible: {{ productoSeleccionado.stock }}
                   </span>
+                </div>
+
+                <div v-if="productoSeleccionado" class="space-y-2">
+                  <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                    <input type="checkbox" v-model="compraExternaProducto" />
+                    Compra externa (no descuenta stock)
+                  </label>
+
+                  <div v-if="compraExternaProducto" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <input
+                      type="number"
+                      v-model.number="costoCompraExternaProducto"
+                      class="input-text"
+                      min="0"
+                      step="0.01"
+                      placeholder="Costo compra externa (opcional)"
+                    />
+                    <input
+                      type="text"
+                      v-model="observacionInventarioProducto"
+                      class="input-text"
+                      placeholder="Observación inventario (opcional)"
+                    />
+                  </div>
                 </div>
 
                 <button type="button" 
@@ -303,6 +338,10 @@ const productoSeleccionado = ref(null);
 const tipoPago = ref('Efectivo');
 const descuento = ref(0);
 const cantidadProducto = ref(1);
+const modoRegistroInventario = ref('OPERATIVO');
+const compraExternaProducto = ref(false);
+const costoCompraExternaProducto = ref(0);
+const observacionInventarioProducto = ref('');
 
 // Referencias para la búsqueda de productos
 const productoSearchTerm = ref('');
@@ -352,7 +391,10 @@ const vehiculosFiltrados = computed(() => {
 
 const cantidadProductoValida = computed(() => {
     if (!productoSeleccionado.value || !cantidadProducto.value) return false;
-    return cantidadProducto.value > 0 && cantidadProducto.value <= productoSeleccionado.value.stock;
+  if (modoRegistroInventario.value === 'HISTORICO' || compraExternaProducto.value) {
+    return cantidadProducto.value > 0;
+  }
+  return cantidadProducto.value > 0 && cantidadProducto.value <= productoSeleccionado.value.stock;
 });
 
 
@@ -539,10 +581,20 @@ const agregarProducto = () => {
             // Actualizar la cantidad si el producto ya existe
             productoExistente.cantidad += cantidadProducto.value;
         } else {
+          const origenInventario = modoRegistroInventario.value === 'HISTORICO'
+            ? 'HISTORICO'
+            : (compraExternaProducto.value ? 'COMPRA_DIRECTA' : 'INVENTARIO');
+
             // Agregar nuevo producto si no existe
             detalleProductos.value.push({
                 ...productoSeleccionado.value,
-                cantidad: cantidadProducto.value
+            cantidad: cantidadProducto.value,
+            origenInventario,
+            afectaStock: origenInventario === 'INVENTARIO',
+            costoCompraExterna: compraExternaProducto.value ? Number(costoCompraExternaProducto.value || 0) : 0,
+            observacionInventario: compraExternaProducto.value
+              ? (observacionInventarioProducto.value || 'Compra directa sin descuento de stock')
+              : null,
             });
         }
         
@@ -550,6 +602,9 @@ const agregarProducto = () => {
         productoSeleccionado.value = null;
         productoSearchTerm.value = '';
         cantidadProducto.value = 1;
+        compraExternaProducto.value = false;
+        costoCompraExternaProducto.value = 0;
+        observacionInventarioProducto.value = '';
         showProductosList.value = false;
         productos.value = []; // Limpiar lista de búsqueda
     }
@@ -591,6 +646,7 @@ const guardarVisita = async () => {
             kilometraje: kilometraje.value,
             proximoCambio: proximoCambio.value,
             tipoPago: tipoPago.value,
+          modoRegistroInventario: modoRegistroInventario.value,
             descuento: Number(descuento.value) || 0,
             total: totalConDescuento.value,
             detalles: [
@@ -598,13 +654,19 @@ const guardarVisita = async () => {
                     tipo: 'Servicio',
                     itemId: s.id,
                     precio: s.precio,
-                    cantidad: s.cantidad
+              cantidad: s.cantidad,
+              origenInventario: modoRegistroInventario.value === 'HISTORICO' ? 'HISTORICO' : 'INVENTARIO',
+              afectaStock: false,
                 })),
                 ...detalleProductos.value.map(p => ({
                     tipo: 'Producto',
                     itemId: p.id,
                     precio: p.precio,
-                    cantidad: p.cantidad
+              cantidad: p.cantidad,
+              origenInventario: p.origenInventario || (modoRegistroInventario.value === 'HISTORICO' ? 'HISTORICO' : 'INVENTARIO'),
+              afectaStock: Boolean(p.afectaStock),
+              costoCompraExterna: Number(p.costoCompraExterna || 0),
+              observacionInventario: p.observacionInventario || null,
                 }))
             ]
         };
@@ -687,8 +749,10 @@ const guardarVisita = async () => {
 
         resetearFormulario();
     } catch (error) {
-        console.error('Error al procesar la visita:', error);
-        alert('Error al procesar la visita. Por favor, verifique los datos.');
+      console.error('Error al procesar la visita:', error);
+      console.error('Detalle backend:', error?.response?.data);
+      const details = error?.response?.data?.details || error?.response?.data?.error || error.message;
+      alert(`Error al procesar la visita: ${details}`);
     }
 };
 
@@ -892,11 +956,15 @@ const resetearFormulario = () => {
     kilometraje.value = 0;
     proximoCambio.value = 0;
     tipoPago.value = 'Efectivo';
+    modoRegistroInventario.value = 'OPERATIVO';
     descuento.value = 0;
     detalleServicios.value = [];
     detalleProductos.value = [];
     productos.value = [];
     productoSearchTerm.value = '';
+    compraExternaProducto.value = false;
+    costoCompraExternaProducto.value = 0;
+    observacionInventarioProducto.value = '';
     showClientesList.value = false;
     showProductosList.value = false;
 };

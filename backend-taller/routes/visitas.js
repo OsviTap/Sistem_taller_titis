@@ -5,6 +5,52 @@ const { sequelize } = require('../models');
 const { registrarSalidaInventarioFIFO } = require('../services/inventarioService');
 const { getBoliviaDateString } = require('../utils/datetimeBolivia');
 
+const normalizeRegistroMode = (value) => {
+    const raw = String(value || '').trim().toUpperCase();
+    if (raw === 'HISTORICO') return 'HISTORICO';
+    return 'OPERATIVO';
+};
+
+const normalizeOrigenInventario = (value, modoRegistro) => {
+    const raw = String(value || '').trim().toUpperCase();
+
+    if (modoRegistro === 'HISTORICO') return 'HISTORICO';
+    if (raw === 'COMPRA_DIRECTA') return 'COMPRA_DIRECTA';
+    return 'INVENTARIO';
+};
+
+const toNumber = (value, fallback = 0) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
+};
+
+let detalleVisitaColumnsCache = null;
+
+const getDetalleVisitaColumns = async (transaction) => {
+    if (detalleVisitaColumnsCache) return detalleVisitaColumnsCache;
+
+    const queryInterface = sequelize.getQueryInterface();
+    const tableDescription = await queryInterface.describeTable('detalle_visitas', { transaction });
+    detalleVisitaColumnsCache = new Set(Object.keys(tableDescription || {}));
+    return detalleVisitaColumnsCache;
+};
+
+const createDetalleVisitaCompat = async (payload, transaction) => {
+    const columns = await getDetalleVisitaColumns(transaction);
+
+    const baseFields = ['visitaId', 'tipo', 'itemId', 'nombreProducto', 'precio', 'cantidad', 'subtotal', 'estado'];
+    const optionalFields = ['origenInventario', 'afectaStock', 'costoCompraExterna', 'observacionInventario'];
+    const fields = [
+        ...baseFields,
+        ...optionalFields.filter((field) => columns.has(field)),
+    ];
+
+    return DetalleVisita.create(payload, {
+        transaction,
+        fields,
+    });
+};
+
 const normalizeDateInput = (value) => {
     if (!value) return null;
 
@@ -169,6 +215,7 @@ router.post('/', async (req, res) => {
 
     try {
         const fechaVisita = normalizeDateInput(req.body.fecha) || getBoliviaDateString();
+        const modoRegistroInventario = normalizeRegistroMode(req.body.modoRegistroInventario);
 
         // 1. Crear la visita
         const visita = await Visita.create({
@@ -187,27 +234,35 @@ router.post('/', async (req, res) => {
             for (const detalle of req.body.detalles) {
                 let nombreItem = null;
                 let producto = null;
+                const origenInventario = normalizeOrigenInventario(detalle.origenInventario, modoRegistroInventario);
+                const afectaStock = modoRegistroInventario === 'OPERATIVO'
+                    && origenInventario === 'INVENTARIO'
+                    && detalle.afectaStock !== false;
+                const costoCompraExterna = toNumber(detalle.costoCompraExterna, 0);
+                const observacionInventario = detalle.observacionInventario || null;
 
                 // Si es un producto, obtener datos y validar stock antes de crear el detalle
                 if (detalle.tipo === 'Producto') {
                     producto = await Producto.findByPk(detalle.itemId, { transaction: t });
                     if (producto) {
                         nombreItem = producto.nombre;
-                        const nuevoStock = producto.stock - detalle.cantidad;
-                        if (nuevoStock < 0) {
-                            throw new Error(`Stock insuficiente para el producto ${producto.nombre}`);
+                        if (afectaStock) {
+                            const nuevoStock = producto.stock - detalle.cantidad;
+                            if (nuevoStock < 0) {
+                                throw new Error(`Stock insuficiente para el producto ${producto.nombre}. Marca el item como compra directa o usa registro historico.`);
+                            }
+
+                            await registrarSalidaInventarioFIFO({
+                                productoId: producto.id,
+                                cantidad: detalle.cantidad,
+                                referenciaTipo: 'VISITA',
+                                referenciaId: visita.id,
+                                observaciones: `Salida por visita ${visita.id}`,
+                                transaction: t,
+                            });
+
+                            await producto.update({ stock: nuevoStock }, { transaction: t });
                         }
-
-                        await registrarSalidaInventarioFIFO({
-                            productoId: producto.id,
-                            cantidad: detalle.cantidad,
-                            referenciaTipo: 'VISITA',
-                            referenciaId: visita.id,
-                            observaciones: `Salida por visita ${visita.id}`,
-                            transaction: t,
-                        });
-
-                        await producto.update({ stock: nuevoStock }, { transaction: t });
                     }
                 } else if (detalle.tipo === 'Servicio') {
                     // Si es un servicio, obtener su nombre para el snapshot
@@ -218,7 +273,7 @@ router.post('/', async (req, res) => {
                     }
                 }
 
-                await DetalleVisita.create({
+                await createDetalleVisitaCompat({
                     visitaId: visita.id,
                     tipo: detalle.tipo,
                     itemId: detalle.itemId,
@@ -226,8 +281,12 @@ router.post('/', async (req, res) => {
                     precio: detalle.precio,
                     cantidad: detalle.cantidad || 1,
                     subtotal: detalle.precio * (detalle.cantidad || 1),
+                    origenInventario,
+                    afectaStock,
+                    costoCompraExterna: costoCompraExterna > 0 ? costoCompraExterna : null,
+                    observacionInventario,
                     estado: 1
-                }, { transaction: t });
+                }, t);
             }
         }
 
@@ -262,26 +321,53 @@ router.post('/', async (req, res) => {
         // 4. Confirmar la transacción
         await t.commit();
 
-        // 5. Emitir evento WebSocket para actualizar la tabla de productos
-        req.app.get('io').emit('stockUpdated');
+        // 5. Emitir evento WebSocket sin bloquear la respuesta principal
+        try {
+            const io = req.app.get('io') || req.io;
+            if (io && typeof io.emit === 'function') {
+                io.emit('stockUpdated');
+            } else {
+                console.warn('[visitas] Socket.IO no disponible para emitir stockUpdated');
+            }
+        } catch (emitError) {
+            console.warn('[visitas] Error al emitir stockUpdated:', emitError.message);
+        }
 
         // 6. Obtener la visita completa con sus detalles
-        const visitaCompleta = await Visita.findByPk(visita.id, {
-            include: [
-                { model: Cliente },
-                { model: Vehiculo },
-                { model: DetalleVisita, as: 'detalles' }
-            ]
-        });
+        let visitaCompleta = null;
+        try {
+            visitaCompleta = await Visita.findByPk(visita.id, {
+                include: [
+                    { model: Cliente },
+                    { model: Vehiculo },
+                    { model: DetalleVisita, as: 'detalles' }
+                ]
+            });
+        } catch (fetchError) {
+            console.warn('[visitas] No se pudo recuperar visita completa post-commit:', fetchError.message);
+        }
 
-        res.status(201).json(visitaCompleta);
+        res.status(201).json(visitaCompleta || visita);
 
     } catch (error) {
-        await t.rollback();
-        console.error('Error:', error);
+        if (!t.finished) {
+            await t.rollback();
+        }
+        console.error('[visitas] Error al crear visita:', {
+            message: error.message,
+            stack: error.stack,
+            payload: {
+                clienteId: req.body?.clienteId,
+                vehiculoId: req.body?.vehiculoId,
+                fecha: req.body?.fecha,
+                detallesCount: Array.isArray(req.body?.detalles) ? req.body.detalles.length : 0,
+                total: req.body?.total,
+            },
+        });
         res.status(500).json({ 
             error: 'Error al crear la visita',
-            details: error.message 
+            details: error.message,
+            code: 'VISIT_CREATE_ERROR'
         });
     }
 });

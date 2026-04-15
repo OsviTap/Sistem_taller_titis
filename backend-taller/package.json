@@ -6,6 +6,7 @@
     "dev": "node ./bin/www",
     "start": "node ./bin/www",
     "migrate:inventario": "node ./scripts/run_migration_inventario_profesional.js",
+    "migrate:visitas-compat": "node ./scripts/run_migration_visitas_historico_externo_compat.js",
     "seed:inventario-inicial": "node ./scripts/seed_inventario_inicial.js"
   },
   "dependencies": {

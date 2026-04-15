@@ -53,6 +53,18 @@ const createDetalleVisitaCompat = async (payload, transaction) => {
     });
 };
 
+const getDetalleVisitaSelectAttributes = async (transaction) => {
+    const columns = await getDetalleVisitaColumns(transaction);
+
+    const baseFields = ['id', 'visitaId', 'tipo', 'itemId', 'nombreProducto', 'precio', 'cantidad', 'subtotal', 'estado', 'createdAt', 'updatedAt'];
+    const optionalFields = ['origenInventario', 'afectaStock', 'costoCompraExterna', 'observacionInventario'];
+
+    return [
+        ...baseFields,
+        ...optionalFields.filter((field) => columns.has(field)),
+    ];
+};
+
 const normalizeDateInput = (value) => {
     if (!value) return null;
 
@@ -112,6 +124,7 @@ router.get('/', async (req, res) => {
         const { page = 1, limit = 10, search = '', clienteId, vehiculoId, fechaInicio, fechaFin } = req.query;
         const offset = (page - 1) * limit;
         const { Op } = require('sequelize');
+        const detalleAttributes = await getDetalleVisitaSelectAttributes();
 
         const whereClause = {};
 
@@ -161,6 +174,7 @@ router.get('/', async (req, res) => {
             { 
                 model: DetalleVisita,
                 as: 'detalles',
+                attributes: detalleAttributes,
                 separate: true // Optimización para evitar problemas con limit/offset y hasMany
             }
         ];
@@ -391,11 +405,12 @@ router.post('/', async (req, res) => {
         // 6. Obtener la visita completa con sus detalles
         let visitaCompleta = null;
         try {
+            const detalleAttributes = await getDetalleVisitaSelectAttributes();
             visitaCompleta = await Visita.findByPk(visita.id, {
                 include: [
                     { model: Cliente },
                     { model: Vehiculo },
-                    { model: DetalleVisita, as: 'detalles' }
+                    { model: DetalleVisita, as: 'detalles', attributes: detalleAttributes }
                 ]
             });
         } catch (fetchError) {

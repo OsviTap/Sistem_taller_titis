@@ -1,0 +1,100 @@
+  parent: Error: Unknown column 'origenInventario' in 'field list'
+      at Packet.asError (/opt/render/project/src/backend-taller/node_modules/mysql2/lib/packets/packet.js:740:17)
+      at Query.execute (/opt/render/project/src/backend-taller/node_modules/mysql2/lib/commands/command.js:29:26)
+      at Connection.handlePacket (/opt/render/project/src/backend-taller/node_modules/mysql2/lib/base/connection.js:475:34)
+      at PacketParser.onPacket (/opt/render/project/src/backend-taller/node_modules/mysql2/lib/base/connection.js:93:12)
+      at PacketParser.executeStart (/opt/render/project/src/backend-taller/node_modules/mysql2/lib/packet_parser.js:75:16)
+      at TLSSocket.<anonymous> (/opt/render/project/src/backend-taller/node_modules/mysql2/lib/base/connection.js:393:25)
+      at TLSSocket.emit (node:events:524:28)
+      at addChunk (node:internal/streams/readable:561:12)
+      at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+      at Readable.push (node:internal/streams/readable:392:5) {
+    code: 'ER_BAD_FIELD_ERROR',
+    errno: 1054,
+    sqlState: '42S22',
+    sqlMessage: "Unknown column 'origenInventario' in 'field list'",
+    sql: 'SELECT `id`, `visitaId`, `tipo`, `itemId`, `nombreProducto`, `precio`, `cantidad`, `subtotal`, `origenInventario`, `afectaStock`, `costoCompraExterna`, `observacionInventario`, `estado`, `createdAt`, `updatedAt` FROM `detalle_visitas` AS `DetalleVisita` WHERE `DetalleVisita`.`visitaId` IN (1914, 1913, 1912, 1910, 1911, 1907, 1909, 1908, 1903, 1902);',
+    parameters: undefined
+  },
+  original: Error: Unknown column 'origenInventario' in 'field list'
+      at Packet.asError (/opt/render/project/src/backend-taller/node_modules/mysql2/lib/packets/packet.js:740:17)
+      at Query.execute (/opt/render/project/src/backend-taller/node_modules/mysql2/lib/commands/command.js:29:26)
+      at Connection.handlePacket (/opt/render/project/src/backend-taller/node_modules/mysql2/lib/base/connection.js:475:34)
+      at PacketParser.onPacket (/opt/render/project/src/backend-taller/node_modules/mysql2/lib/base/connection.js:93:12)
+      at PacketParser.executeStart (/opt/render/project/src/backend-taller/node_modules/mysql2/lib/packet_parser.js:75:16)
+      at TLSSocket.<anonymous> (/opt/render/project/src/backend-taller/node_modules/mysql2/lib/base/connection.js:393:25)
+      at TLSSocket.emit (node:events:524:28)
+      at addChunk (node:internal/streams/readable:561:12)
+      at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+      at Readable.push (node:internal/streams/readable:392:5) {
+    code: 'ER_BAD_FIELD_ERROR',
+    errno: 1054,
+    sqlState: '42S22',
+    sqlMessage: "Unknown column 'origenInventario' in 'field list'",
+    sql: 'SELECT `id`, `visitaId`, `tipo`, `itemId`, `nombreProducto`, `precio`, `cantidad`, `subtotal`, `origenInventario`, `afectaStock`, `costoCompraExterna`, `observacionInventario`, `estado`, `createdAt`, `updatedAt` FROM `detalle_visitas` AS `DetalleVisita` WHERE `DetalleVisita`.`visitaId` IN (1914, 1913, 1912, 1910, 1911, 1907, 1909, 1908, 1903, 1902);',
+    parameters: undefined
+  },
+  sql: 'SELECT `id`, `visitaId`, `tipo`, `itemId`, `nombreProducto`, `precio`, `cantidad`, `subtotal`, `origenInventario`, `afectaStock`, `costoCompraExterna`, `observacionInventario`, `estado`, `createdAt`, `updatedAt` FROM `detalle_visitas` AS `DetalleVisita` WHERE `DetalleVisita`.`visitaId` IN (1914, 1913, 1912, 1910, 1911, 1907, 1909, 1908, 1903, 1902);',
+  parameters: {}
+}
+GET /api/visitas?page=1&limit=10&search= 500 360.935 ms - 36
+Executing (default): SELECT count(DISTINCT(`Visita`.`id`)) AS `count` FROM `visitas` AS `Visita` LEFT OUTER JOIN `clientes` AS `Cliente` ON `Visita`.`clienteId` = `Cliente`.`id` LEFT OUTER JOIN `vehiculos` AS `Vehiculo` ON `Visita`.`vehiculoId` = `Vehiculo`.`id` LEFT OUTER JOIN `marcas` AS `Vehiculo->marcaVehiculo` ON `Vehiculo`.`marcaId` = `Vehiculo->marcaVehiculo`.`id` LEFT OUTER JOIN `modelos` AS `Vehiculo->modeloVehiculo` ON `Vehiculo`.`modeloId` = `Vehiculo->modeloVehiculo`.`id`;
+Executing (default): SELECT `Visita`.`id`, `Visita`.`clienteId`, `Visita`.`vehiculoId`, `Visita`.`fecha`, `Visita`.`kilometraje`, `Visita`.`proximoCambio`, `Visita`.`tipoPago`, `Visita`.`descuento`, `Visita`.`total`, `Visita`.`createdAt`, `Visita`.`updatedAt`, `Cliente`.`id` AS `Cliente.id`, `Cliente`.`nombre` AS `Cliente.nombre`, `Cliente`.`telefono` AS `Cliente.telefono`, `Cliente`.`nit` AS `Cliente.nit`, `Cliente`.`direccion` AS `Cliente.direccion`, `Cliente`.`estado` AS `Cliente.estado`, `Cliente`.`createdAt` AS `Cliente.createdAt`, `Cliente`.`updatedAt` AS `Cliente.updatedAt`, `Vehiculo`.`id` AS `Vehiculo.id`, `Vehiculo`.`clienteId` AS `Vehiculo.clienteId`, `Vehiculo`.`marcaId` AS `Vehiculo.marcaId`, `Vehiculo`.`modeloId` AS `Vehiculo.modeloId`, `Vehiculo`.`anio` AS `Vehiculo.anio`, `Vehiculo`.`placa` AS `Vehiculo.placa`, `Vehiculo`.`estado` AS `Vehiculo.estado`, `Vehiculo`.`createdAt` AS `Vehiculo.createdAt`, `Vehiculo`.`updatedAt` AS `Vehiculo.updatedAt`, `Vehiculo->marcaVehiculo`.`id` AS `Vehiculo.marcaVehiculo.id`, `Vehiculo->marcaVehiculo`.`nombre` AS `Vehiculo.marcaVehiculo.nombre`, `Vehiculo->modeloVehiculo`.`id` AS `Vehiculo.modeloVehiculo.id`, `Vehiculo->modeloVehiculo`.`nombre` AS `Vehiculo.modeloVehiculo.nombre` FROM `visitas` AS `Visita` LEFT OUTER JOIN `clientes` AS `Cliente` ON `Visita`.`clienteId` = `Cliente`.`id` LEFT OUTER JOIN `vehiculos` AS `Vehiculo` ON `Visita`.`vehiculoId` = `Vehiculo`.`id` LEFT OUTER JOIN `marcas` AS `Vehiculo->marcaVehiculo` ON `Vehiculo`.`marcaId` = `Vehiculo->marcaVehiculo`.`id` LEFT OUTER JOIN `modelos` AS `Vehiculo->modeloVehiculo` ON `Vehiculo`.`modeloId` = `Vehiculo->modeloVehiculo`.`id` ORDER BY `Visita`.`fecha` DESC LIMIT 0, 10;
+Executing (default): SELECT `id`, `visitaId`, `tipo`, `itemId`, `nombreProducto`, `precio`, `cantidad`, `subtotal`, `origenInventario`, `afectaStock`, `costoCompraExterna`, `observacionInventario`, `estado`, `createdAt`, `updatedAt` FROM `detalle_visitas` AS `DetalleVisita` WHERE `DetalleVisita`.`visitaId` IN (1914, 1913, 1912, 1910, 1911, 1907, 1909, 1908, 1903, 1902);
+Executing (default): SELECT count(DISTINCT(`Cliente`.`id`)) AS `count` FROM `clientes` AS `Cliente` LEFT OUTER JOIN `vehiculos` AS `Vehiculos` ON `Cliente`.`id` = `Vehiculos`.`clienteId` AND `Vehiculos`.`estado` = 1 LEFT OUTER JOIN `marcas` AS `Vehiculos->marcaVehiculo` ON `Vehiculos`.`marcaId` = `Vehiculos->marcaVehiculo`.`id` LEFT OUTER JOIN `modelos` AS `Vehiculos->modeloVehiculo` ON `Vehiculos`.`modeloId` = `Vehiculos->modeloVehiculo`.`id` WHERE `Cliente`.`estado` = 1;
+Executing (default): SELECT `Cliente`.*, `Vehiculos`.`id` AS `Vehiculos.id`, `Vehiculos`.`clienteId` AS `Vehiculos.clienteId`, `Vehiculos`.`marcaId` AS `Vehiculos.marcaId`, `Vehiculos`.`modeloId` AS `Vehiculos.modeloId`, `Vehiculos`.`anio` AS `Vehiculos.anio`, `Vehiculos`.`placa` AS `Vehiculos.placa`, `Vehiculos`.`estado` AS `Vehiculos.estado`, `Vehiculos`.`createdAt` AS `Vehiculos.createdAt`, `Vehiculos`.`updatedAt` AS `Vehiculos.updatedAt`, `Vehiculos->marcaVehiculo`.`id` AS `Vehiculos.marcaVehiculo.id`, `Vehiculos->marcaVehiculo`.`nombre` AS `Vehiculos.marcaVehiculo.nombre`, `Vehiculos->marcaVehiculo`.`createdAt` AS `Vehiculos.marcaVehiculo.createdAt`, `Vehiculos->marcaVehiculo`.`updatedAt` AS `Vehiculos.marcaVehiculo.updatedAt`, `Vehiculos->modeloVehiculo`.`id` AS `Vehiculos.modeloVehiculo.id`, `Vehiculos->modeloVehiculo`.`nombre` AS `Vehiculos.modeloVehiculo.nombre`, `Vehiculos->modeloVehiculo`.`marcaId` AS `Vehiculos.modeloVehiculo.marcaId`, `Vehiculos->modeloVehiculo`.`createdAt` AS `Vehiculos.modeloVehiculo.createdAt`, `Vehiculos->modeloVehiculo`.`updatedAt` AS `Vehiculos.modeloVehiculo.updatedAt` FROM (SELECT `Cliente`.`id`, `Cliente`.`nombre`, `Cliente`.`telefono`, `Cliente`.`nit`, `Cliente`.`direccion`, `Cliente`.`estado`, `Cliente`.`createdAt`, `Cliente`.`updatedAt` FROM `clientes` AS `Cliente` WHERE `Cliente`.`estado` = 1 ORDER BY `Cliente`.`createdAt` DESC LIMIT 0, 100) AS `Cliente` LEFT OUTER JOIN `vehiculos` AS `Vehiculos` ON `Cliente`.`id` = `Vehiculos`.`clienteId` AND `Vehiculos`.`estado` = 1 LEFT OUTER JOIN `marcas` AS `Vehiculos->marcaVehiculo` ON `Vehiculos`.`marcaId` = `Vehiculos->marcaVehiculo`.`id` LEFT OUTER JOIN `modelos` AS `Vehiculos->modeloVehiculo` ON `Vehiculos`.`modeloId` = `Vehiculos->modeloVehiculo`.`id` ORDER BY `Cliente`.`createdAt` DESC;
+GET /api/clientes?limit=100 200 52.509 ms - 59073
+Executing (default): SELECT `id`, `visitaId`, `tipo`, `itemId`, `nombreProducto`, `precio`, `cantidad`, `subtotal`, `origenInventario`, `afectaStock`, `costoCompraExterna`, `observacionInventario`, `estado`, `createdAt`, `updatedAt` FROM `detalle_visitas` AS `DetalleVisita` WHERE `DetalleVisita`.`visitaId` IN (1914, 1913, 1912, 1910, 1911, 1907, 1909, 1908, 1903, 1902);
+Executing (default): SELECT `id`, `visitaId`, `tipo`, `itemId`, `nombreProducto`, `precio`, `cantidad`, `subtotal`, `origenInventario`, `afectaStock`, `costoCompraExterna`, `observacionInventario`, `estado`, `createdAt`, `updatedAt` FROM `detalle_visitas` AS `DetalleVisita` WHERE `DetalleVisita`.`visitaId` IN (1914, 1913, 1912, 1910, 1911, 1907, 1909, 1908, 1903, 1902);
+Error al obtener visitas: Error
+    at Query.run (/opt/render/project/src/backend-taller/node_modules/sequelize/lib/dialects/mysql/query.js:52:25)
+    at /opt/render/project/src/backend-taller/node_modules/sequelize/lib/sequelize.js:315:28
+    at async MySQLQueryInterface.select (/opt/render/project/src/backend-taller/node_modules/sequelize/lib/dialects/abstract/query-interface.js:407:12)
+    at async DetalleVisita.findAll (/opt/render/project/src/backend-taller/node_modules/sequelize/lib/model.js:1140:21)
+    at async HasMany.get (/opt/render/project/src/backend-taller/node_modules/sequelize/lib/associations/has-many.js:170:21)
+    at async /opt/render/project/src/backend-taller/node_modules/sequelize/lib/model.js:1202:19
+    at async Promise.all (index 2)
+    at async Model._findSeparate (/opt/render/project/src/backend-taller/node_modules/sequelize/lib/model.js:1186:5)
+    at async Visita.findAll (/opt/render/project/src/backend-taller/node_modules/sequelize/lib/model.js:1153:12)
+    at async Promise.all (index 1) {
+  name: 'SequelizeDatabaseError',
+  parent: Error: Unknown column 'origenInventario' in 'field list'
+      at Packet.asError (/opt/render/project/src/backend-taller/node_modules/mysql2/lib/packets/packet.js:740:17)
+      at Query.execute (/opt/render/project/src/backend-taller/node_modules/mysql2/lib/commands/command.js:29:26)
+      at Connection.handlePacket (/opt/render/project/src/backend-taller/node_modules/mysql2/lib/base/connection.js:475:34)
+      at PacketParser.onPacket (/opt/render/project/src/backend-taller/node_modules/mysql2/lib/base/connection.js:93:12)
+      at PacketParser.executeStart (/opt/render/project/src/backend-taller/node_modules/mysql2/lib/packet_parser.js:75:16)
+      at TLSSocket.<anonymous> (/opt/render/project/src/backend-taller/node_modules/mysql2/lib/base/connection.js:393:25)
+      at TLSSocket.emit (node:events:524:28)
+      at addChunk (node:internal/streams/readable:561:12)
+      at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+      at Readable.push (node:internal/streams/readable:392:5) {
+    code: 'ER_BAD_FIELD_ERROR',
+    errno: 1054,
+    sqlState: '42S22',
+    sqlMessage: "Unknown column 'origenInventario' in 'field list'",
+    sql: 'SELECT `id`, `visitaId`, `tipo`, `itemId`, `nombreProducto`, `precio`, `cantidad`, `subtotal`, `origenInventario`, `afectaStock`, `costoCompraExterna`, `observacionInventario`, `estado`, `createdAt`, `updatedAt` FROM `detalle_visitas` AS `DetalleVisita` WHERE `DetalleVisita`.`visitaId` IN (1914, 1913, 1912, 1910, 1911, 1907, 1909, 1908, 1903, 1902);',
+    parameters: undefined
+  },
+  original: Error: Unknown column 'origenInventario' in 'field list'
+      at Packet.asError (/opt/render/project/src/backend-taller/node_modules/mysql2/lib/packets/packet.js:740:17)
+      at Query.execute (/opt/render/project/src/backend-taller/node_modules/mysql2/lib/commands/command.js:29:26)
+      at Connection.handlePacket (/opt/render/project/src/backend-taller/node_modules/mysql2/lib/base/connection.js:475:34)
+      at PacketParser.onPacket (/opt/render/project/src/backend-taller/node_modules/mysql2/lib/base/connection.js:93:12)
+      at PacketParser.executeStart (/opt/render/project/src/backend-taller/node_modules/mysql2/lib/packet_parser.js:75:16)
+      at TLSSocket.<anonymous> (/opt/render/project/src/backend-taller/node_modules/mysql2/lib/base/connection.js:393:25)
+      at TLSSocket.emit (node:events:524:28)
+      at addChunk (node:internal/streams/readable:561:12)
+      at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+      at Readable.push (node:internal/streams/readable:392:5) {
+    code: 'ER_BAD_FIELD_ERROR',
+    errno: 1054,
+    sqlState: '42S22',
+    sqlMessage: "Unknown column 'origenInventario' in 'field list'",
+    sql: 'SELECT `id`, `visitaId`, `tipo`, `itemId`, `nombreProducto`, `precio`, `cantidad`, `subtotal`, `origenInventario`, `afectaStock`, `costoCompraExterna`, `observacionInventario`, `estado`, `createdAt`, `updatedAt` FROM `detalle_visitas` AS `DetalleVisita` WHERE `DetalleVisita`.`visitaId` IN (1914, 1913, 1912, 1910, 1911, 1907, 1909, 1908, 1903, 1902);',
+    parameters: undefined
+  },
+  sql: 'SELECT `id`, `visitaId`, `tipo`, `itemId`, `nombreProducto`, `precio`, `cantidad`, `subtotal`, `origenInventario`, `afectaStock`, `costoCompraExterna`, `observacionInventario`, `estado`, `createdAt`, `updatedAt` FROM `detalle_visitas` AS `DetalleVisita` WHERE `DetalleVisita`.`visitaId` IN (1914, 1913, 1912, 1910, 1911, 1907, 1909, 1908, 1903, 1902);',
+  parameters: {}
+}
+GET /api/visitas?page=1&limit=10 500 303.087 ms - 36

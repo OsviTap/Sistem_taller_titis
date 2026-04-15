@@ -66,6 +66,7 @@ router.post('/', async (req, res) => {
                         {
                             model: DetalleVisita,
                             as: 'detalles',
+                            attributes: ['id', 'visitaId', 'tipo', 'itemId', 'nombreProducto', 'precio', 'cantidad', 'subtotal', 'estado', 'createdAt', 'updatedAt'],
                             include: [
                                 {
                                     model: Servicio,
@@ -136,6 +137,7 @@ router.get('/', async (req, res) => {
                         {
                             model: DetalleVisita,
                             as: 'detalles',
+                            attributes: ['id', 'visitaId', 'tipo', 'itemId', 'nombreProducto', 'precio', 'cantidad', 'subtotal', 'estado', 'createdAt', 'updatedAt'],
                             where: { estado: 1 },
                             required: false,
                             include: [

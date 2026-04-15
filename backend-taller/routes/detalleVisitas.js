@@ -10,6 +10,7 @@ router.get('/visita/:visitaId', async (req, res) => {
                 visitaId: req.params.visitaId,
                 estado: 1
             },
+            attributes: ['id', 'visitaId', 'tipo', 'itemId', 'nombreProducto', 'precio', 'cantidad', 'subtotal', 'estado', 'createdAt', 'updatedAt'],
             include: [
                 {
                     model: Servicio,

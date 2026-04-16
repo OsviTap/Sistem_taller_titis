@@ -17,7 +17,7 @@
     "cors": "^2.8.5",
     "debug": "~2.6.9",
     "dotenv": "^16.4.7",
-    "express": "~4.16.1",
+    "express": "~4.22.0",
     "fs": "^0.0.1-security",
     "googleapis": "^171.4.0",
     "jsonwebtoken": "^9.0.2",
